@@ -1,3 +1,11 @@
 export const ORIGENS = ['WhatsApp', 'Formulário', 'Indicação'] as const;
 
 export const STATUSES = ['Novo', 'Reunião agendada', 'Proposta enviada', 'Perdido'] as const;
+
+export const TIPOS_CONTATO = ['Novo', 'Follow-up'] as const;
+
+const STATUSES_COM_TIPO_CONTATO = new Set(['Reunião agendada', 'Proposta enviada']);
+
+export function statusPrecisaTipoContato(status: string): boolean {
+  return STATUSES_COM_TIPO_CONTATO.has(status);
+}

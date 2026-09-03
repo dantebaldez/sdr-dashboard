@@ -288,3 +288,108 @@ button:focus-visible {
 .matrix-table th {
 	background: var(--color-accent-soft);
 }
+
+.field-error {
+	margin: 0;
+	font-size: 0.8rem;
+	color: #b23b3b;
+}
+
+.global-search {
+	margin-top: 1.5rem;
+}
+
+.search-field {
+	position: relative;
+	max-width: 360px;
+}
+
+.search-icon {
+	position: absolute;
+	left: 0.7rem;
+	top: 50%;
+	transform: translateY(-50%);
+	color: var(--color-muted);
+	pointer-events: none;
+}
+
+.search-field input[type='search'] {
+	width: 100%;
+	font-family: var(--font-body);
+	font-size: 0.95rem;
+	padding: 0.5rem 0.75rem 0.5rem 2.25rem;
+	border: 1px solid var(--color-border);
+	border-radius: 4px;
+	background: var(--color-surface);
+	color: var(--color-ink);
+}
+
+.global-search table {
+	margin-top: 1rem;
+}
+
+.select-pendente {
+	border-color: var(--color-accent) !important;
+}
+
+.kommo-panel {
+	margin-top: 1.5rem;
+}
+
+.kommo-config {
+	display: flex;
+	flex-direction: column;
+	gap: 1rem;
+	margin: 1rem 0;
+	padding: 1rem;
+	background: var(--color-bg);
+	border: 1px solid var(--color-border);
+	border-radius: 4px;
+}
+
+.kommo-mapa {
+	display: flex;
+	flex-direction: column;
+	gap: 0.75rem;
+}
+.btn-delete {
+  background: transparent;
+  color: #b23b3b;
+  border: 1px solid #e3b8b8;
+  border-radius: 4px;
+  padding: 0.3rem 0.6rem;
+  font-family: var(--font-body);
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.btn-delete:hover {
+  background: #fbeaea;
+}
+.conversion-rate {
+  margin: 0.75rem 0 0;
+  font-size: 0.9rem;
+  color: var(--color-muted);
+}
+
+.conversion-rate strong {
+  color: var(--color-accent-secondary);
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+}
+
+.edit-telefone input {
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  padding: 0.3rem 0.4rem;
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  background: var(--color-surface);
+  color: var(--color-ink);
+}
+
+.row-actions {
+  display: flex;
+  gap: 0.4rem;
+  white-space: nowrap;
+}

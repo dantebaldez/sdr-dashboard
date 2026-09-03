@@ -3,41 +3,56 @@ import { ORIGENS } from '../constants/leadOptions';
 import type { Lead } from '../types/lead';
 
 interface LeadFormProps {
+	existingLeads: Lead[];
 	onAddLead: (lead: Lead) => void;
 }
 
-export function LeadForm({ onAddLead }: LeadFormProps) {
-	const [nome, setNome] = useState('');
+export function LeadForm({ existingLeads, onAddLead }: LeadFormProps) {
+	const [telefone, setTelefone] = useState('');
 	const [origem, setOrigem] = useState<(typeof ORIGENS)[number]>(ORIGENS[0]);
+	const [erro, setErro] = useState('');
 
 	function handleSubmit(event: FormEvent) {
 		event.preventDefault();
-		if (!nome.trim()) return;
+		const telefoneLimpo = telefone.trim();
+		if (!telefoneLimpo) return;
+
+		const jaExiste = existingLeads.some((lead) => lead.telefone === telefoneLimpo);
+		if (jaExiste) {
+			setErro('Esse número já foi cadastrado.');
+			return;
+		}
 
 		onAddLead({
 			id: crypto.randomUUID(),
-			nome: nome.trim(),
+			telefone: telefoneLimpo,
 			origem,
 			status: 'Novo',
+			tipoContato: null,
 			criadoEm: new Date().toISOString(),
 		});
 
-		setNome('');
+		setTelefone('');
 		setOrigem(ORIGENS[0]);
+		setErro('');
 	}
 
 	return (
 		<form className="lead-form" onSubmit={handleSubmit}>
 			<div className="form-field">
-				<label htmlFor="nome">Número de Telefone do Lead</label>
+				<label htmlFor="telefone">Telefone</label>
 				<input
-					id="nome"
-					type="text"
-					value={nome}
-					onChange={(e) => setNome(e.target.value)}
-					placeholder="Telefone"
+					id="telefone"
+					type="tel"
+					value={telefone}
+					onChange={(e) => {
+						setTelefone(e.target.value);
+						if (erro) setErro('');
+					}}
+					placeholder="Ex: (11) 91234-5678"
 					required
 				/>
+				{erro && <p className="field-error">{erro}</p>}
 			</div>
 
 			<div className="form-field">
