@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { ORIGENS } from '../constants/leadOptions';
 import type { Lead } from '../types/lead';
-
+import { normalizeTelefone } from '../utils/normalizeTelefone';
 interface LeadFormProps {
   existingLeads: Lead[];
   onAddLead: (lead: Lead) => void;
@@ -19,38 +19,40 @@ export function LeadForm({ existingLeads, onAddLead }: LeadFormProps) {
   }, []);
 
   function handleSubmit(event: FormEvent) {
-    event.preventDefault();
-    setSucesso(false);
-    const telefoneLimpo = telefone.trim();
+  event.preventDefault();
+  setSucesso(false);
+  const telefoneLimpo = normalizeTelefone(telefone.trim());
 
-    if (!telefoneLimpo) {
-      setErro('Digite um telefone antes de adicionar.');
-      return;
-    }
-
-    const jaExiste = existingLeads.some((lead) => lead.telefone === telefoneLimpo);
-    if (jaExiste) {
-      setErro(`O número ${telefoneLimpo} já está cadastrado.`);
-      return;
-    }
-
-    onAddLead({
-  id: crypto.randomUUID(),
-  telefone: telefoneLimpo,
-  origem,
-  status: 'Novo',
-  tipoContato: null,
-  nota: '',
-  criadoEm: new Date().toISOString(),
-});
-
-    setTelefone('');
-    setOrigem(ORIGENS[0]);
-    setErro('');
-    setSucesso(true);
-    telefoneRef.current?.focus();
-    setTimeout(() => setSucesso(false), 2000);
+  if (!telefoneLimpo) {
+    setErro('Digite um telefone antes de adicionar.');
+    return;
   }
+
+  const jaExiste = existingLeads.some(
+    (lead) => normalizeTelefone(lead.telefone) === telefoneLimpo
+  );
+  if (jaExiste) {
+    setErro(`O número ${telefone.trim()} já está cadastrado.`);
+    return;
+  }
+
+  onAddLead({
+    id: crypto.randomUUID(),
+    telefone: telefoneLimpo,
+    origem,
+    status: 'Novo',
+    tipoContato: null,
+    nota: '',
+    criadoEm: new Date().toISOString(),
+  });
+
+  setTelefone('');
+  setOrigem(ORIGENS[0]);
+  setErro('');
+  setSucesso(true);
+  telefoneRef.current?.focus();
+  setTimeout(() => setSucesso(false), 2000);
+}
 
   return (
     <form className="lead-form" onSubmit={handleSubmit}>
