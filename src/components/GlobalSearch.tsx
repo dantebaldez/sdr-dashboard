@@ -11,6 +11,7 @@ interface GlobalSearchProps {
   onStatusChange: (id: string, status: LeadStatus) => void;
   onOrigemChange: (id: string, origem: Origem) => void;
   onTipoContatoChange: (id: string, tipoContato: TipoContato) => void;
+  onNoShowChange: (id: string, noShow: boolean) => void;
   onTelefoneChange: (id: string, telefone: string) => { sucesso: boolean; erro?: string };
   onDeleteLead: (id: string) => void;
   onNotaChange: (id: string, nota: string) => void;
@@ -28,6 +29,7 @@ export function GlobalSearch({
   onStatusChange,
   onOrigemChange,
   onTipoContatoChange,
+  onNoShowChange,
   onTelefoneChange,
   onDeleteLead,
   onNotaChange,
@@ -40,7 +42,6 @@ export function GlobalSearch({
     function handleKeyDown(event: KeyboardEvent) {
       if (event.key !== '/') return;
       if (elementoEhCampoDeTexto(document.activeElement)) return;
-
       event.preventDefault();
       inputRef.current?.focus();
     }
@@ -50,11 +51,9 @@ export function GlobalSearch({
   }, []);
 
   const resultados = termoLimpo
-  ? leads.filter((lead) => {
-      const leadNormalizado = normalizeTelefone(lead.telefone);
-      const termoNormalizado = normalizeTelefone(termoLimpo);
-      return leadNormalizado === termoNormalizado;
-    })
+  ? leads.filter((lead) =>
+      normalizeTelefone(lead.telefone ?? '').includes(normalizeTelefone(termoLimpo))
+    )
   : [];
 
   return (
@@ -83,6 +82,7 @@ export function GlobalSearch({
             onStatusChange={onStatusChange}
             onOrigemChange={onOrigemChange}
             onTipoContatoChange={onTipoContatoChange}
+            onNoShowChange={onNoShowChange}
             onTelefoneChange={onTelefoneChange}
             onDeleteLead={onDeleteLead}
             onNotaChange={onNotaChange}

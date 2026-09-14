@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ORIGENS, STATUSES, TIPOS_CONTATO, statusPrecisaTipoContato } from '../constants/leadOptions';
+import { ORIGENS, STATUSES, TIPOS_CONTATO, statusPrecisaTipoContato, statusPrecisaNoShow } from '../constants/leadOptions';
 import type { Lead, LeadStatus, Origem, TipoContato } from '../types/lead';
 
 interface LeadListProps {
@@ -7,6 +7,7 @@ interface LeadListProps {
   onStatusChange?: (id: string, status: LeadStatus) => void;
   onOrigemChange?: (id: string, origem: Origem) => void;
   onTipoContatoChange?: (id: string, tipoContato: TipoContato) => void;
+  onNoShowChange?: (id: string, noShow: boolean) => void;
   onTelefoneChange?: (id: string, telefone: string) => { sucesso: boolean; erro?: string };
   onDeleteLead?: (id: string) => void;
   onNotaChange?: (id: string, nota: string) => void;
@@ -16,12 +17,7 @@ interface LeadListProps {
 function IconeLapis() {
   return (
     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path
-        d="M4 20h4l10.5-10.5a2.121 2.121 0 0 0-3-3L5 17v3Z"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinejoin="round"
-      />
+      <path d="M4 20h4l10.5-10.5a2.121 2.121 0 0 0-3-3L5 17v3Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
     </svg>
   );
 }
@@ -29,13 +25,7 @@ function IconeLapis() {
 function IconeLixeira() {
   return (
     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path
-        d="M5 7h14M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
+      <path d="M5 7h14M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }
@@ -43,12 +33,7 @@ function IconeLixeira() {
 function IconeNota() {
   return (
     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path
-        d="M6 4h9l3 3v13a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1Z"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinejoin="round"
-      />
+      <path d="M6 4h9l3 3v13a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
       <path d="M9 10h6M9 14h6M9 18h3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
     </svg>
   );
@@ -59,6 +44,7 @@ export function LeadList({
   onStatusChange,
   onOrigemChange,
   onTipoContatoChange,
+  onNoShowChange,
   onTelefoneChange,
   onDeleteLead,
   onNotaChange,
@@ -125,13 +111,14 @@ export function LeadList({
           <span role="columnheader">Telefone</span>
           <span role="columnheader">Origem</span>
           <span role="columnheader">Status</span>
-          <span role="columnheader">Tipo</span>
+          <span role="columnheader">Tipo / No Show</span>
           {temAlgumaColunaAcoes && <span role="columnheader" aria-label="Ações" />}
         </div>
 
         <div role="rowgroup">
           {leads.map((lead) => {
             const precisaTipo = statusPrecisaTipoContato(lead.status);
+            const precisaNoShow = statusPrecisaNoShow(lead.status);
             const estaEditando = editandoId === lead.id;
             const editavel = isLeadEditavel ? isLeadEditavel(lead) : true;
             const temColunaAcoes = temAlgumaColunaAcoes && editavel;
@@ -166,13 +153,9 @@ export function LeadList({
                         aria-label={`Origem do lead ${lead.telefone}`}
                         className={lead.origem ? undefined : 'select-pendente'}
                       >
-                        <option value="" disabled>
-                          Selecionar origem
-                        </option>
+                        <option value="" disabled>Selecionar origem</option>
                         {ORIGENS.map((origem) => (
-                          <option key={origem} value={origem}>
-                            {origem}
-                          </option>
+                          <option key={origem} value={origem}>{origem}</option>
                         ))}
                       </select>
                     ) : (
@@ -188,9 +171,7 @@ export function LeadList({
                         aria-label={`Status do lead ${lead.telefone}`}
                       >
                         {STATUSES.map((status) => (
-                          <option key={status} value={status}>
-                            {status}
-                          </option>
+                          <option key={status} value={status}>{status}</option>
                         ))}
                       </select>
                     ) : (
@@ -198,30 +179,41 @@ export function LeadList({
                     )}
                   </div>
 
-                  <div role="cell">
-                    {precisaTipo ? (
-                      onTipoContatoChange && editavel ? (
-                        <select
-                          value={lead.tipoContato ?? ''}
-                          onChange={(e) => onTipoContatoChange(lead.id, e.target.value as TipoContato)}
-                          aria-label={`Tipo de contato do lead ${lead.telefone}`}
-                          className={lead.tipoContato ? undefined : 'select-pendente'}
-                        >
-                          <option value="" disabled>
-                            Selecionar
-                          </option>
-                          {TIPOS_CONTATO.map((tipo) => (
-                            <option key={tipo} value={tipo}>
-                              {tipo}
-                            </option>
-                          ))}
-                        </select>
+                  <div role="cell" className="lead-cell-tipo">
+                    <div className="tipo-noshow">
+                      {precisaTipo ? (
+                        onTipoContatoChange && editavel ? (
+                          <select
+                            value={lead.tipoContato ?? ''}
+                            onChange={(e) => onTipoContatoChange(lead.id, e.target.value as TipoContato)}
+                            aria-label={`Tipo de contato do lead ${lead.telefone}`}
+                            className={lead.tipoContato ? undefined : 'select-pendente'}
+                          >
+                            <option value="" disabled>Selecionar</option>
+                            {TIPOS_CONTATO.map((tipo) => (
+                              <option key={tipo} value={tipo}>{tipo}</option>
+                            ))}
+                          </select>
+                        ) : (
+                          lead.tipoContato ?? '—'
+                        )
                       ) : (
-                        lead.tipoContato ?? '—'
-                      )
-                    ) : (
-                      '—'
-                    )}
+                        '—'
+                      )}
+
+                      {precisaNoShow && (
+                        <label className="noshow-label">
+                          <input
+                            type="checkbox"
+                            checked={lead.noShow}
+                            onChange={(e) => onNoShowChange?.(lead.id, e.target.checked)}
+                            disabled={!editavel || !onNoShowChange}
+                            aria-label={`No Show do lead ${lead.telefone}`}
+                          />
+                          No Show
+                        </label>
+                      )}
+                    </div>
                   </div>
 
                   {temAlgumaColunaAcoes && (
@@ -280,28 +272,28 @@ export function LeadList({
                 </div>
 
                 {editandoNota && (
-									<div className="lead-note-editor">
-										<label htmlFor={`nota-${lead.id}`}>Nota</label>
-										<div className="lead-note-editor-row">
-											<input
-												id={`nota-${lead.id}`}
-												type="text"
-												value={valorNota}
-												onChange={(e) => setValorNota(e.target.value)}
-												placeholder="Ex: prefere contato à tarde"
-												autoFocus
-											/>
-											<div className="lead-note-editor-actions">
-												<button type="button" className="btn-secondary btn-compact" onClick={cancelarEdicaoNota}>
-													Cancelar
-												</button>
-												<button type="button" className="btn-primary btn-compact" onClick={() => salvarNota(lead.id)}>
-													Salvar
-												</button>
-											</div>
-										</div>
-									</div>
-								)}
+                  <div className="lead-note-editor">
+                    <label htmlFor={`nota-${lead.id}`}>Nota</label>
+                    <div className="lead-note-editor-row">
+                      <input
+                        id={`nota-${lead.id}`}
+                        type="text"
+                        value={valorNota}
+                        onChange={(e) => setValorNota(e.target.value)}
+                        placeholder="Ex: prefere contato à tarde"
+                        autoFocus
+                      />
+                      <div className="lead-note-editor-actions">
+                        <button type="button" className="btn-secondary btn-compact" onClick={cancelarEdicaoNota}>
+                          Cancelar
+                        </button>
+                        <button type="button" className="btn-primary btn-compact" onClick={() => salvarNota(lead.id)}>
+                          Salvar
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             );
           })}

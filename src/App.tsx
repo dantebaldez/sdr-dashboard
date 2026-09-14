@@ -15,6 +15,7 @@ import { filterLeadsBySemana } from './utils/filterLeadsBySemana';
 import { loadFromStorage, saveToStorage } from './utils/storage';
 import { nowLocalISO } from './utils/dateTime';
 import { exportLeadsAsCsv } from './utils/exportCsv';
+import { normalizeTelefone } from './utils/normalizeTelefone';
 import { statusPrecisaTipoContato } from './constants/leadOptions';
 import type { Lead, LeadStatus, Origem, TipoContato } from './types/lead';
 import type { Semana } from './types/semana';
@@ -87,11 +88,17 @@ function App() {
     setLeads((prev) => prev.map((lead) => (lead.id === id ? { ...lead, tipoContato } : lead)));
   }
 
+  function handleNoShowChange(id: string, noShow: boolean) {
+    setLeads((prev) => prev.map((lead) => (lead.id === id ? { ...lead, noShow } : lead)));
+  }
+
   function handleTelefoneChange(id: string, novoTelefone: string): { sucesso: boolean; erro?: string } {
     if (!novoTelefone) {
       return { sucesso: false, erro: 'O telefone não pode ficar vazio.' };
     }
-    const duplicado = leads.some((lead) => lead.id !== id && lead.telefone === novoTelefone);
+    const duplicado = leads.some(
+      (lead) => lead.id !== id && normalizeTelefone(lead.telefone) === normalizeTelefone(novoTelefone)
+    );
     if (duplicado) {
       return { sucesso: false, erro: 'Esse número já está cadastrado em outro lead.' };
     }
@@ -126,7 +133,7 @@ function App() {
     importados: KommoLeadImportado[],
     mapaStatus: Record<string, LeadStatus>
   ) {
-    const existentes = new Set(leads.map((lead) => lead.telefone));
+    const existentes = new Set(leads.map((lead) => normalizeTelefone(lead.telefone)));
     const novos: Lead[] = [];
     let semTelefone = 0;
     let duplicados = 0;
@@ -136,7 +143,7 @@ function App() {
         semTelefone += 1;
         continue;
       }
-      if (existentes.has(item.telefone)) {
+      if (existentes.has(normalizeTelefone(item.telefone))) {
         duplicados += 1;
         continue;
       }
@@ -146,10 +153,11 @@ function App() {
         origem: null,
         status: mapaStatus[item.statusId] ?? 'Novo',
         tipoContato: null,
+        noShow: false,
         nota: '',
         criadoEm: item.criadoEm,
       });
-      existentes.add(item.telefone);
+      existentes.add(normalizeTelefone(item.telefone));
     }
 
     setLeads((prev) => [...prev, ...novos]);
@@ -210,6 +218,7 @@ function App() {
         onStatusChange={handleStatusChange}
         onOrigemChange={handleOrigemChange}
         onTipoContatoChange={handleTipoContatoChange}
+        onNoShowChange={handleNoShowChange}
         onTelefoneChange={handleTelefoneChange}
         onDeleteLead={handleDeleteLead}
         onNotaChange={handleNotaChange}
@@ -267,6 +276,7 @@ function App() {
                 onStatusChange={visualizandoSemanaAtual ? handleStatusChange : undefined}
                 onOrigemChange={visualizandoSemanaAtual ? handleOrigemChange : undefined}
                 onTipoContatoChange={visualizandoSemanaAtual ? handleTipoContatoChange : undefined}
+                onNoShowChange={visualizandoSemanaAtual ? handleNoShowChange : undefined}
                 onTelefoneChange={visualizandoSemanaAtual ? handleTelefoneChange : undefined}
                 onDeleteLead={visualizandoSemanaAtual ? handleDeleteLead : undefined}
                 onNotaChange={handleNotaChange}

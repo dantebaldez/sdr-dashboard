@@ -15,6 +15,12 @@ function contarNovosPorOrigem(leads: Lead[], origem: string) {
   return leads.filter((lead) => lead.origem === origem && ehLeadNovo(lead.tipoContato)).length;
 }
 
+function contarNoShow(leads: Lead[], origem: string) {
+  return leads.filter(
+    (lead) => lead.origem === origem && lead.status === 'Reunião agendada' && lead.noShow
+  ).length;
+}
+
 export function generateReport(leads: Lead[], semana: Semana): string {
   const linhas = [
     `➡️ WhatsApp: ${contarNovosPorOrigem(leads, 'WhatsApp')}`,
@@ -26,6 +32,9 @@ export function generateReport(leads: Lead[], semana: Semana): string {
     `➡️ Reunião Forms (Follow-up): ${contar(leads, 'Formulário', 'Reunião agendada', 'Follow-up')}`,
     `➡️ Reunião Indicação (Novo): ${contar(leads, 'Indicação', 'Reunião agendada', 'Novo')}`,
     `➡️ Reunião Indicação (Follow-up): ${contar(leads, 'Indicação', 'Reunião agendada', 'Follow-up')}`,
+    `➡️ No Show WhatsApp: ${contarNoShow(leads, 'WhatsApp')}`,
+    `➡️ No Show Forms: ${contarNoShow(leads, 'Formulário')}`,
+    `➡️ No Show Indicação: ${contarNoShow(leads, 'Indicação')}`,
     `➡️ Propostas Forms (Novo): ${contar(leads, 'Formulário', 'Proposta enviada', 'Novo')}`,
     `➡️ Propostas Forms (Follow-up): ${contar(leads, 'Formulário', 'Proposta enviada', 'Follow-up')}`,
     `➡️ Propostas WhatsApp (Novo): ${contar(leads, 'WhatsApp', 'Proposta enviada', 'Novo')}`,
