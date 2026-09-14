@@ -10,5 +10,6 @@ export interface Lead {
   origem: Origem | null;
   status: LeadStatus;
   tipoContato: TipoContato | null;
+  nota: string;
   criadoEm: string;
 }

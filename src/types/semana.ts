@@ -1,5 +1,8 @@
 export interface Semana {
-	id: string;
-	inicio: string; // data ISO (yyyy-mm-dd)
-	fim: string | null; // null enquanto a semana está ativa
+  id: string;
+  inicio: string;
+  fim: string | null;
+  metaLeads: number | null;
+  metaReunioes: number | null;
+  metaPropostas: number | null;
 }

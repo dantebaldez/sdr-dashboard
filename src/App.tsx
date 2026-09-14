@@ -6,6 +6,7 @@ import { WeekSelector } from './components/WeekSelector';
 import { OriginSummary } from './components/OriginSummary';
 import { ConversionRate } from './components/ConversionRate';
 import { WeeksComparison } from './components/WeeksComparison';
+import { WeeklyGoals } from './components/WeeklyGoals';
 import { ReportView } from './components/ReportView';
 import { ChartsSection } from './components/ChartsSection';
 import { GlobalSearch } from './components/GlobalSearch';
@@ -22,9 +23,17 @@ import './App.css';
 
 const LEADS_KEY = 'sdr-dashboard:leads';
 const SEMANAS_KEY = 'sdr-dashboard:semanas';
+const TEMA_KEY = 'sdr-dashboard:tema';
 
 function criarSemanaInicial(): Semana {
-  return { id: crypto.randomUUID(), inicio: nowLocalISO(), fim: null };
+  return {
+    id: crypto.randomUUID(),
+    inicio: nowLocalISO(),
+    fim: null,
+    metaLeads: null,
+    metaReunioes: null,
+    metaPropostas: null,
+  };
 }
 
 function App() {
@@ -33,6 +42,7 @@ function App() {
     const salvas = loadFromStorage<Semana[]>(SEMANAS_KEY, []);
     return salvas.length > 0 ? salvas : [criarSemanaInicial()];
   });
+  const [tema, setTema] = useState<'claro' | 'escuro'>(() => loadFromStorage(TEMA_KEY, 'claro'));
 
   const semanaAtiva = semanas.find((s) => s.fim === null) ?? semanas[semanas.length - 1];
   const [semanaSelecionadaId, setSemanaSelecionadaId] = useState<string>(semanaAtiva.id);
@@ -45,12 +55,18 @@ function App() {
     saveToStorage(SEMANAS_KEY, semanas);
   }, [semanas]);
 
+  useEffect(() => {
+    document.documentElement.dataset.theme = tema === 'escuro' ? 'dark' : '';
+    saveToStorage(TEMA_KEY, tema);
+  }, [tema]);
+
   const semanaSelecionada = semanas.find((s) => s.id === semanaSelecionadaId) ?? semanaAtiva;
   const visualizandoSemanaAtual = semanaSelecionada.id === semanaAtiva.id;
   const leadsDaSemana = filterLeadsBySemana(leads, semanaSelecionada);
 
   function handleAddLead(lead: Lead) {
     setLeads((prev) => [...prev, lead]);
+    setSemanaSelecionadaId(semanaAtiva.id);
   }
 
   function handleStatusChange(id: string, status: LeadStatus) {
@@ -87,6 +103,25 @@ function App() {
     setLeads((prev) => prev.filter((lead) => lead.id !== id));
   }
 
+  function handleNotaChange(id: string, nota: string) {
+    setLeads((prev) => prev.map((lead) => (lead.id === id ? { ...lead, nota } : lead)));
+  }
+
+  function handleDefinirMetas(metas: { metaLeads: number; metaReunioes: number; metaPropostas: number }) {
+    setSemanas((prev) =>
+      prev.map((s) =>
+        s.id === semanaAtiva.id && s.metaLeads === null
+          ? {
+              ...s,
+              metaLeads: metas.metaLeads,
+              metaReunioes: metas.metaReunioes,
+              metaPropostas: metas.metaPropostas,
+            }
+          : s
+      )
+    );
+  }
+
   function handleImportKommoLeads(
     importados: KommoLeadImportado[],
     mapaStatus: Record<string, LeadStatus>
@@ -111,6 +146,7 @@ function App() {
         origem: null,
         status: mapaStatus[item.statusId] ?? 'Novo',
         tipoContato: null,
+        nota: '',
         criadoEm: item.criadoEm,
       });
       existentes.add(item.telefone);
@@ -133,7 +169,14 @@ function App() {
     if (!confirmou) return;
 
     const agora = nowLocalISO();
-    const novaSemana: Semana = { id: crypto.randomUUID(), inicio: agora, fim: null };
+    const novaSemana: Semana = {
+      id: crypto.randomUUID(),
+      inicio: agora,
+      fim: null,
+      metaLeads: null,
+      metaReunioes: null,
+      metaPropostas: null,
+    };
 
     setSemanas((prev) => [
       ...prev.map((s) => (s.id === semanaAtiva.id ? { ...s, fim: agora } : s)),
@@ -147,11 +190,30 @@ function App() {
   return (
     <div className="page">
       <header className="page-header">
-        <h1>SDR Dashboard</h1>
-        <p className="page-subtitle">Acompanhamento semanal de leads</p>
+        <div className="page-header-top">
+          <div>
+            <h1>SDR Dashboard - Primária Energia</h1>
+            <p className="page-subtitle">Acompanhamento semanal de leads</p>
+          </div>
+          <button
+            className="btn-secondary"
+            onClick={() => setTema((t) => (t === 'claro' ? 'escuro' : 'claro'))}
+          >
+            {tema === 'claro' ? '🌙 Modo escuro' : '☀️ Modo claro'}
+          </button>
+        </div>
       </header>
 
-      <GlobalSearch leads={leads} />
+      <GlobalSearch
+        leads={leads}
+        semanaAtiva={semanaAtiva}
+        onStatusChange={handleStatusChange}
+        onOrigemChange={handleOrigemChange}
+        onTipoContatoChange={handleTipoContatoChange}
+        onTelefoneChange={handleTelefoneChange}
+        onDeleteLead={handleDeleteLead}
+        onNotaChange={handleNotaChange}
+      />
 
       <section className="filter-bar">
         <WeekSelector
@@ -186,42 +248,54 @@ function App() {
       )}
 
       {showReport && (
-        <ReportView leads={leadsDaSemana} onClose={() => setShowReport(false)} />
+        <ReportView leads={leadsDaSemana} semana={semanaSelecionada} onClose={() => setShowReport(false)} />
       )}
 
-      <section className="stats-row">
-        <OriginSummary leads={leadsDaSemana} />
-        <ConversionRate leads={leadsDaSemana} />
-      </section>
+      <div className="dashboard-layout">
+        <div className="dashboard-main">
+          <div className={`main-grid ${visualizandoSemanaAtual ? '' : 'single-column'}`}>
+            {visualizandoSemanaAtual && (
+              <section className="panel form-panel">
+                <h2>Novo lead</h2>
+                <LeadForm existingLeads={leads} onAddLead={handleAddLead} />
+              </section>
+            )}
+            <section className="panel table-panel">
+              <h2>Leads da semana</h2>
+              <LeadList
+                leads={leadsDaSemana}
+                onStatusChange={visualizandoSemanaAtual ? handleStatusChange : undefined}
+                onOrigemChange={visualizandoSemanaAtual ? handleOrigemChange : undefined}
+                onTipoContatoChange={visualizandoSemanaAtual ? handleTipoContatoChange : undefined}
+                onTelefoneChange={visualizandoSemanaAtual ? handleTelefoneChange : undefined}
+                onDeleteLead={visualizandoSemanaAtual ? handleDeleteLead : undefined}
+                onNotaChange={handleNotaChange}
+              />
+            </section>
+          </div>
 
-      <div className={`main-grid ${visualizandoSemanaAtual ? '' : 'single-column'}`}>
-        {visualizandoSemanaAtual && (
-          <section className="panel form-panel">
-            <h2>Novo lead</h2>
-            <LeadForm existingLeads={leads} onAddLead={handleAddLead} />
-          </section>
-        )}
-        <section className="panel table-panel">
-          <h2>Leads da semana</h2>
-          <LeadList
+          <WeeklyGoals
+            semana={semanaSelecionada}
             leads={leadsDaSemana}
-            onStatusChange={visualizandoSemanaAtual ? handleStatusChange : undefined}
-            onOrigemChange={visualizandoSemanaAtual ? handleOrigemChange : undefined}
-            onTipoContatoChange={visualizandoSemanaAtual ? handleTipoContatoChange : undefined}
-            onTelefoneChange={visualizandoSemanaAtual ? handleTelefoneChange : undefined}
-            onDeleteLead={visualizandoSemanaAtual ? handleDeleteLead : undefined}
+            editavel={visualizandoSemanaAtual}
+            onDefinirMetas={handleDefinirMetas}
           />
-        </section>
+
+          <section className="stats-row">
+            <OriginSummary leads={leadsDaSemana} />
+            <ConversionRate leads={leadsDaSemana} />
+          </section>
+
+          <section className="panel">
+            <h2>Comparativo entre semanas</h2>
+            <WeeksComparison leads={leads} semanas={semanas} />
+          </section>
+
+          {visualizandoSemanaAtual && <KommoPanel onImportLeads={handleImportKommoLeads} />}
+        </div>
       </div>
 
-      <section className="panel">
-        <h2>Comparativo entre semanas</h2>
-        <WeeksComparison leads={leads} semanas={semanas} />
-      </section>
-
-      {visualizandoSemanaAtual && <KommoPanel onImportLeads={handleImportKommoLeads} />}
-
-      {showReport && <ChartsSection leads={leadsDaSemana} />}
+      {showReport && <ChartsSection leads={leadsDaSemana} semana={semanaSelecionada} />}
     </div>
   );
 }
