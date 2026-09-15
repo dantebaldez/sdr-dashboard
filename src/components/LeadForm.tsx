@@ -30,8 +30,13 @@ export function LeadForm({ existingLeads, onAddLead }: LeadFormProps) {
     }
 
     const jaExiste = existingLeads.some(
-  		(lead) => normalizeTelefone(lead.telefone) === normalizeTelefone(telefoneLimpo)
-);
+			(lead) => normalizeTelefone(lead.telefone) === normalizeTelefone(telefoneLimpo)
+		);
+
+		if (jaExiste) {
+			setErro(`O número ${telefoneLimpo} já está cadastrado.`);
+			return;
+		}
 
     onAddLead({
       id: crypto.randomUUID(),
