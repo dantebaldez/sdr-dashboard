@@ -1,4 +1,7 @@
 import { useEffect, useState } from 'react';
+import { supabase } from './lib/supabase';
+import type { Session } from '@supabase/supabase-js';
+import { Login } from './components/Login';
 import { LeadForm } from './components/LeadForm';
 import { LeadList } from './components/LeadList';
 import { WeekFilter } from './components/WeekFilter';
@@ -11,8 +14,8 @@ import { ReportView } from './components/ReportView';
 import { ChartsSection } from './components/ChartsSection';
 import { GlobalSearch } from './components/GlobalSearch';
 import { KommoPanel } from './components/KommoPanel';
+import { useSupabaseData } from './hooks/useSupabaseData';
 import { filterLeadsBySemana } from './utils/filterLeadsBySemana';
-import { loadFromStorage, saveToStorage } from './utils/storage';
 import { nowLocalISO } from './utils/dateTime';
 import { exportLeadsAsCsv } from './utils/exportCsv';
 import { normalizeTelefone } from './utils/normalizeTelefone';
@@ -22,8 +25,6 @@ import type { Semana } from './types/semana';
 import type { KommoLeadImportado } from './types/kommo';
 import './App.css';
 
-const LEADS_KEY = 'sdr-dashboard:leads';
-const SEMANAS_KEY = 'sdr-dashboard:semanas';
 const TEMA_KEY = 'sdr-dashboard:tema';
 
 function criarSemanaInicial(): Semana {
@@ -37,99 +38,142 @@ function criarSemanaInicial(): Semana {
   };
 }
 
+function loadTema(): 'claro' | 'escuro' {
+  try {
+    return (localStorage.getItem(TEMA_KEY) as 'claro' | 'escuro') ?? 'claro';
+  } catch {
+    return 'claro';
+  }
+}
+
 function App() {
-  const [leads, setLeads] = useState<Lead[]>(() => loadFromStorage(LEADS_KEY, []));
-  const [semanas, setSemanas] = useState<Semana[]>(() => {
-    const salvas = loadFromStorage<Semana[]>(SEMANAS_KEY, []);
-    return salvas.length > 0 ? salvas : [criarSemanaInicial()];
-  });
-  const [tema, setTema] = useState<'claro' | 'escuro'>(() => loadFromStorage(TEMA_KEY, 'claro'));
+  const [session, setSession] = useState<Session | null>(null);
+	const [verificandoAuth, setVerificandoAuth] = useState(true);
+	const [tema, setTema] = useState<'claro' | 'escuro'>(loadTema);
+	
 
-  const semanaAtiva = semanas.find((s) => s.fim === null) ?? semanas[semanas.length - 1];
-  const [semanaSelecionadaId, setSemanaSelecionadaId] = useState<string>(semanaAtiva.id);
+  const {
+    leads,
+    semanas,
+    carregando,
+    salvarLead,
+    atualizarLead,
+    deletarLead,
+    salvarSemana,
+    atualizarSemana,
+  } = useSupabaseData();
 
   useEffect(() => {
-    saveToStorage(LEADS_KEY, leads);
-  }, [leads]);
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setVerificandoAuth(false);
+    });
 
-  useEffect(() => {
-    saveToStorage(SEMANAS_KEY, semanas);
-  }, [semanas]);
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
 
   useEffect(() => {
     document.documentElement.dataset.theme = tema === 'escuro' ? 'dark' : '';
-    saveToStorage(TEMA_KEY, tema);
+    localStorage.setItem(TEMA_KEY, tema);
   }, [tema]);
+
+  const semanasOrdenadas = [...semanas].sort((a, b) => a.inicio > b.inicio ? 1 : -1);
+  const semanaAtiva = semanasOrdenadas.find((s) => s.fim === null) ?? semanasOrdenadas[semanasOrdenadas.length - 1];
+  const [semanaSelecionadaId, setSemanaSelecionadaId] = useState<string>('');
+
+  useEffect(() => {
+    if (semanaAtiva && !semanaSelecionadaId) {
+      setSemanaSelecionadaId(semanaAtiva.id);
+    }
+  }, [semanaAtiva, semanaSelecionadaId]);
+
+  useEffect(() => {
+    if (!carregando && semanas.length === 0) {
+      const novaSemana = criarSemanaInicial();
+      salvarSemana(novaSemana);
+      setSemanaSelecionadaId(novaSemana.id);
+    }
+  }, [carregando, semanas.length, salvarSemana]);
+
+  if (verificandoAuth) return null;
+  if (!session) return <Login />;
+
+  if (carregando || !semanaAtiva || !semanaSelecionadaId) {
+    return (
+      <div className="page">
+        <p className="empty-state">Carregando...</p>
+      </div>
+    );
+  }
 
   const semanaSelecionada = semanas.find((s) => s.id === semanaSelecionadaId) ?? semanaAtiva;
   const visualizandoSemanaAtual = semanaSelecionada.id === semanaAtiva.id;
   const leadsDaSemana = filterLeadsBySemana(leads, semanaSelecionada);
 
-  function handleAddLead(lead: Lead) {
-    setLeads((prev) => [...prev, lead]);
+  async function handleAddLead(lead: Lead) {
+    await salvarLead(lead);
     setSemanaSelecionadaId(semanaAtiva.id);
   }
 
-  function handleStatusChange(id: string, status: LeadStatus) {
-    setLeads((prev) =>
-      prev.map((lead) => {
-        if (lead.id !== id) return lead;
-        const precisaTipo = statusPrecisaTipoContato(status);
-        return { ...lead, status, tipoContato: precisaTipo ? lead.tipoContato : null };
-      })
-    );
+  async function handleStatusChange(id: string, status: LeadStatus) {
+    const lead = leads.find((l) => l.id === id);
+    if (!lead) return;
+    const precisaTipo = statusPrecisaTipoContato(status);
+    const atualizado = { ...lead, status, tipoContato: precisaTipo ? lead.tipoContato : null };
+    await atualizarLead(atualizado);
   }
 
-  function handleOrigemChange(id: string, origem: Origem) {
-    setLeads((prev) => prev.map((lead) => (lead.id === id ? { ...lead, origem } : lead)));
+  async function handleOrigemChange(id: string, origem: Origem) {
+    const lead = leads.find((l) => l.id === id);
+    if (!lead) return;
+    await atualizarLead({ ...lead, origem });
   }
 
-  function handleTipoContatoChange(id: string, tipoContato: TipoContato) {
-    setLeads((prev) => prev.map((lead) => (lead.id === id ? { ...lead, tipoContato } : lead)));
+  async function handleTipoContatoChange(id: string, tipoContato: TipoContato) {
+    const lead = leads.find((l) => l.id === id);
+    if (!lead) return;
+    await atualizarLead({ ...lead, tipoContato });
   }
 
-  function handleNoShowChange(id: string, noShow: boolean) {
-    setLeads((prev) => prev.map((lead) => (lead.id === id ? { ...lead, noShow } : lead)));
+  async function handleNoShowChange(id: string, noShow: boolean) {
+    const lead = leads.find((l) => l.id === id);
+    if (!lead) return;
+    await atualizarLead({ ...lead, noShow });
   }
 
-  function handleTelefoneChange(id: string, novoTelefone: string): { sucesso: boolean; erro?: string } {
-    if (!novoTelefone) {
-      return { sucesso: false, erro: 'O telefone não pode ficar vazio.' };
-    }
+  async function handleTelefoneChange(id: string, novoTelefone: string): Promise<{ sucesso: boolean; erro?: string }> {
+    if (!novoTelefone) return { sucesso: false, erro: 'O telefone não pode ficar vazio.' };
     const duplicado = leads.some(
       (lead) => lead.id !== id && normalizeTelefone(lead.telefone) === normalizeTelefone(novoTelefone)
     );
-    if (duplicado) {
-      return { sucesso: false, erro: 'Esse número já está cadastrado em outro lead.' };
-    }
-    setLeads((prev) => prev.map((lead) => (lead.id === id ? { ...lead, telefone: novoTelefone } : lead)));
+    if (duplicado) return { sucesso: false, erro: 'Esse número já está cadastrado em outro lead.' };
+    const lead = leads.find((l) => l.id === id);
+    if (!lead) return { sucesso: false };
+    await atualizarLead({ ...lead, telefone: novoTelefone });
     return { sucesso: true };
   }
 
-  function handleDeleteLead(id: string) {
-    setLeads((prev) => prev.filter((lead) => lead.id !== id));
+  async function handleDeleteLead(id: string) {
+    await deletarLead(id);
   }
 
-  function handleNotaChange(id: string, nota: string) {
-    setLeads((prev) => prev.map((lead) => (lead.id === id ? { ...lead, nota } : lead)));
+  async function handleNotaChange(id: string, nota: string) {
+    const lead = leads.find((l) => l.id === id);
+    if (!lead) return;
+    await atualizarLead({ ...lead, nota });
   }
 
-  function handleDefinirMetas(metas: { metaLeads: number; metaReunioes: number; metaPropostas: number }) {
-    setSemanas((prev) =>
-      prev.map((s) =>
-        s.id === semanaAtiva.id && s.metaLeads === null
-          ? {
-              ...s,
-              metaLeads: metas.metaLeads,
-              metaReunioes: metas.metaReunioes,
-              metaPropostas: metas.metaPropostas,
-            }
-          : s
-      )
-    );
+  async function handleDefinirMetas(metas: { metaLeads: number; metaReunioes: number; metaPropostas: number }) {
+    if (semanaAtiva.metaLeads !== null) return;
+    const atualizada = { ...semanaAtiva, ...metas };
+    await atualizarSemana(atualizada);
   }
 
-  function handleImportKommoLeads(
+  async function handleImportKommoLeads(
     importados: KommoLeadImportado[],
     mapaStatus: Record<string, LeadStatus>
   ) {
@@ -139,14 +183,8 @@ function App() {
     let duplicados = 0;
 
     for (const item of importados) {
-      if (!item.telefone) {
-        semTelefone += 1;
-        continue;
-      }
-      if (existentes.has(normalizeTelefone(item.telefone))) {
-        duplicados += 1;
-        continue;
-      }
+      if (!item.telefone) { semTelefone += 1; continue; }
+      if (existentes.has(normalizeTelefone(item.telefone))) { duplicados += 1; continue; }
       novos.push({
         id: crypto.randomUUID(),
         telefone: item.telefone,
@@ -160,23 +198,23 @@ function App() {
       existentes.add(normalizeTelefone(item.telefone));
     }
 
-    setLeads((prev) => [...prev, ...novos]);
+    for (const lead of novos) await salvarLead(lead);
     return { importados: novos.length, duplicados, semTelefone };
   }
 
-  function handleInicioChange(novaData: string) {
-    setSemanas((prev) =>
-      prev.map((s) => (s.id === semanaAtiva.id ? { ...s, inicio: `${novaData}T00:00:00` } : s))
-    );
+  async function handleInicioChange(novaData: string) {
+    await atualizarSemana({ ...semanaAtiva, inicio: `${novaData}T00:00:00` });
   }
 
-  function handleEncerrarSemana() {
+  async function handleEncerrarSemana() {
     const confirmou = window.confirm(
       'Encerrar a semana atual? Os contadores vão zerar e uma nova semana vai começar agora.'
     );
     if (!confirmou) return;
 
     const agora = nowLocalISO();
+    await atualizarSemana({ ...semanaAtiva, fim: agora });
+
     const novaSemana: Semana = {
       id: crypto.randomUUID(),
       inicio: agora,
@@ -185,11 +223,7 @@ function App() {
       metaReunioes: null,
       metaPropostas: null,
     };
-
-    setSemanas((prev) => [
-      ...prev.map((s) => (s.id === semanaAtiva.id ? { ...s, fim: agora } : s)),
-      novaSemana,
-    ]);
+    await salvarSemana(novaSemana);
     setSemanaSelecionadaId(novaSemana.id);
   }
 
@@ -203,12 +237,20 @@ function App() {
             <h1>SDR Dashboard - Primária Energia</h1>
             <p className="page-subtitle">Acompanhamento semanal de leads</p>
           </div>
-          <button
-            className="btn-secondary"
-            onClick={() => setTema((t) => (t === 'claro' ? 'escuro' : 'claro'))}
-          >
-            {tema === 'claro' ? '🌙 Modo escuro' : '☀️ Modo claro'}
-          </button>
+          <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+            <button
+              className="btn-secondary"
+              onClick={() => setTema((t) => (t === 'claro' ? 'escuro' : 'claro'))}
+            >
+              {tema === 'claro' ? '🌙 Modo escuro' : '☀️ Modo claro'}
+            </button>
+            <button
+              className="btn-secondary"
+              onClick={() => supabase.auth.signOut()}
+            >
+              Sair
+            </button>
+          </div>
         </div>
       </header>
 

@@ -9,7 +9,7 @@ interface LeadListProps {
   onOrigemChange?: (id: string, origem: Origem) => void;
   onTipoContatoChange?: (id: string, tipoContato: TipoContato) => void;
   onNoShowChange?: (id: string, noShow: boolean) => void;
-  onTelefoneChange?: (id: string, telefone: string) => { sucesso: boolean; erro?: string };
+  onTelefoneChange?: (id: string, telefone: string) => { sucesso: boolean; erro?: string } | Promise<{ sucesso: boolean; erro?: string }>;
   onDeleteLead?: (id: string) => void;
   onNotaChange?: (id: string, nota: string) => void;
   isLeadEditavel?: (lead: Lead) => boolean;
