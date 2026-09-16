@@ -82,16 +82,19 @@ export function LeadList({
     setErroEdicao('');
   }
 
-  function salvarEdicao(id: string) {
-    if (!onTelefoneChange) return;
-    const resultado = onTelefoneChange(id, valorEdicao.trim());
-    if (!resultado.sucesso) {
-      setErroEdicao(resultado.erro ?? 'Não foi possível salvar.');
-      return;
-    }
-    setEditandoId(null);
-    setErroEdicao('');
+  async function salvarEdicao(id: string) {
+  if (!onTelefoneChange) return;
+
+  const resultado = await onTelefoneChange(id, valorEdicao.trim());
+
+  if (!resultado.sucesso) {
+    setErroEdicao(resultado.erro ?? 'Não foi possível salvar.');
+    return;
   }
+
+  setEditandoId(null);
+  setErroEdicao('');
+}
 
   function iniciarEdicaoNota(lead: Lead) {
     setNotaEditandoId(lead.id);
@@ -246,7 +249,7 @@ export function LeadList({
                       {temColunaAcoes && !editandoNota && (
                         estaEditando ? (
                           <>
-                            <button type="button" className="btn-secondary btn-compact" onClick={() => salvarEdicao(lead.id)}>
+                            <button type="button" className="btn-secondary btn-compact" onClick={() => void salvarEdicao(lead.id)}>
                               Salvar
                             </button>
                             <button type="button" className="btn-secondary btn-compact" onClick={cancelarEdicao}>
