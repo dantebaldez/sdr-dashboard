@@ -572,3 +572,19 @@ button:focus-visible {
   gap: 0.5rem;
   flex-shrink: 0;
 }
+.telefone-link {
+  background: none;
+  border: none;
+  border-bottom: 1px dashed var(--color-muted);
+  color: inherit;
+  font-family: var(--font-body);
+  font-size: inherit;
+  padding: 0;
+  cursor: pointer;
+  text-align: left;
+}
+
+.telefone-link:hover {
+  color: #25d366;
+  border-bottom-color: #25d366;
+}

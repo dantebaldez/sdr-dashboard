@@ -41,9 +41,12 @@ export function generateReport(leads: Lead[], semana: Semana): string {
     `➡️ Propostas WhatsApp (Follow-up): ${contar(leads, 'WhatsApp', 'Proposta enviada', 'Follow-up')}`,
     `➡️ Propostas Indicação (Novo): ${contar(leads, 'Indicação', 'Proposta enviada', 'Novo')}`,
     `➡️ Propostas Indicação (Follow-up): ${contar(leads, 'Indicação', 'Proposta enviada', 'Follow-up')}`,
-    `➡️ Perdido Form: ${contar(leads, 'Formulário', 'Perdido')}`,
-    `➡️ Perdido WhatsApp: ${contar(leads, 'WhatsApp', 'Perdido')}`,
-    `➡️ Perdido Indicação: ${contar(leads, 'Indicação', 'Perdido')}`,
+    `➡️ Perdido Form (Novo): ${contar(leads, 'Formulário', 'Perdido', 'Novo')}`,
+		`➡️ Perdido Form (Follow-up): ${contar(leads, 'Formulário', 'Perdido', 'Follow-up')}`,
+		`➡️ Perdido WhatsApp (Novo): ${contar(leads, 'WhatsApp', 'Perdido', 'Novo')}`,
+		`➡️ Perdido WhatsApp (Follow-up): ${contar(leads, 'WhatsApp', 'Perdido', 'Follow-up')}`,
+		`➡️ Perdido Indicação (Novo): ${contar(leads, 'Indicação', 'Perdido', 'Novo')}`,
+		`➡️ Perdido Indicação (Follow-up): ${contar(leads, 'Indicação', 'Perdido', 'Follow-up')}`,
   ];
 
   if (semana.metaLeads !== null && semana.metaReunioes !== null && semana.metaPropostas !== null) {

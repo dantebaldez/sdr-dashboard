@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { ORIGENS, STATUSES, TIPOS_CONTATO, statusPrecisaTipoContato, statusPrecisaNoShow } from '../constants/leadOptions';
+import { normalizeTelefone } from '../utils/normalizeTelefone';
 import type { Lead, LeadStatus, Origem, TipoContato } from '../types/lead';
 
 interface LeadListProps {
@@ -37,6 +38,10 @@ function IconeNota() {
       <path d="M9 10h6M9 14h6M9 18h3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
     </svg>
   );
+}
+
+function abrirWhatsApp(telefone: string) {
+  window.open(`https://wa.me/${normalizeTelefone(telefone)}`, '_blank');
 }
 
 export function LeadList({
@@ -128,6 +133,7 @@ export function LeadList({
             return (
               <div key={lead.id}>
                 <div className="lead-row" role="row">
+
                   <div role="cell" className="lead-cell-phone">
                     {estaEditando ? (
                       <div className="edit-telefone">
@@ -141,7 +147,14 @@ export function LeadList({
                         {erroEdicao && <p className="field-error">{erroEdicao}</p>}
                       </div>
                     ) : (
-                      lead.telefone
+                      <button
+                        type="button"
+                        className="telefone-link"
+                        onClick={() => abrirWhatsApp(lead.telefone)}
+                        title="Abrir no WhatsApp"
+                      >
+                        {lead.telefone}
+                      </button>
                     )}
                   </div>
 
