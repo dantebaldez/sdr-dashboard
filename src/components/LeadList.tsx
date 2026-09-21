@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { ORIGENS, STATUSES, TIPOS_CONTATO, statusPrecisaTipoContato, statusPrecisaNoShow } from '../constants/leadOptions';
-import { normalizeTelefone } from '../utils/normalizeTelefone';
+// import { normalizeTelefone } from '../utils/normalizeTelefone';
 import type { Lead, LeadStatus, Origem, TipoContato } from '../types/lead';
 
 interface LeadListProps {
