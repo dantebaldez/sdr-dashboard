@@ -40,8 +40,8 @@ function IconeNota() {
   );
 }
 
-function abrirWhatsApp(telefone: string) {
-  window.open(`https://wa.me/${normalizeTelefone(telefone)}`, '_blank');
+async function copiarTelefone(telefone: string) {
+  await navigator.clipboard.writeText(telefone);
 }
 
 export function LeadList({
@@ -150,14 +150,14 @@ export function LeadList({
                         {erroEdicao && <p className="field-error">{erroEdicao}</p>}
                       </div>
                     ) : (
-                      <button
-                        type="button"
-                        className="telefone-link"
-                        onClick={() => abrirWhatsApp(lead.telefone)}
-                        title="Abrir no WhatsApp"
-                      >
-                        {lead.telefone}
-                      </button>
+											<button
+												type="button"
+												className="telefone-link"
+												onClick={() => copiarTelefone(lead.telefone)}
+												title="Copiar número"
+											>
+												{lead.telefone}
+											</button>
                     )}
                   </div>
 
