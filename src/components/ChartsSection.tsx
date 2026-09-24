@@ -27,9 +27,9 @@ export function ChartsSection({ leads, semana }: ChartsSectionProps) {
         { label: 'Leads (meta)', value: semana.metaLeads! },
         { label: 'Leads (real)', value: leads.length },
         { label: 'Reuniões (meta)', value: semana.metaReunioes! },
-        { label: 'Reuniões (real)', value: leads.filter((l) => l.status === 'Reunião agendada').length },
+        { label: 'Reuniões (real)', value: leads.filter((l) => l.status === 'Agendamento marcado').length },
         { label: 'Propostas (meta)', value: semana.metaPropostas! },
-        { label: 'Propostas (real)', value: leads.filter((l) => l.status === 'Proposta enviada').length },
+        { label: 'Propostas (real)', value: leads.filter((l) => l.status === 'Proposta em negociação').length },
       ]
     : [];
 

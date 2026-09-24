@@ -98,8 +98,8 @@ export function WeeklyGoals({ semana, leads, editavel, onDefinirMetas }: WeeklyG
   }
 
   const totalLeads = leads.length;
-  const totalReunioes = leads.filter((lead) => lead.status === 'Reunião agendada').length;
-  const totalPropostas = leads.filter((lead) => lead.status === 'Proposta enviada').length;
+  const totalReunioes = leads.filter((lead) => lead.status === 'Agendamento marcado').length;
+	const totalPropostas = leads.filter((lead) => lead.status === 'Proposta em negociação').length;
 
   const itens = [
     { label: 'Leads cadastrados', atual: totalLeads, meta: semana.metaLeads! },
