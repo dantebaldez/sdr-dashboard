@@ -7,16 +7,24 @@ interface ConversionRateProps {
 export function ConversionRate({ leads }: ConversionRateProps) {
   if (leads.length === 0) return null;
 
-  const avancaram = leads.filter(
-    (lead) => lead.status === 'Reunião agendada' || lead.status === 'Proposta enviada'
-  ).length;
+  const agendados = leads.filter((l) => l.status === 'Agendamento marcado').length;
+  const propostas = leads.filter((l) => l.status === 'Proposta em negociação').length;
+  const fechados = leads.filter((l) => l.status === 'Venda fechada').length;
 
-  const taxa = Math.round((avancaram / leads.length) * 100);
+  const taxaAgendamento = Math.round((agendados / leads.length) * 100);
+  const taxaFechamento = agendados > 0 ? Math.round((fechados / agendados) * 100) : 0;
 
   return (
-    <p className="conversion-rate">
-      <strong>{taxa}%</strong> dos leads dessa semana viraram reunião ou proposta ({avancaram} de{' '}
-      {leads.length})
-    </p>
+    <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap', marginTop: '0.75rem' }}>
+      <p className="conversion-rate">
+        <strong>{taxaAgendamento}%</strong> dos leads viraram agendamento ({agendados} de {leads.length})
+      </p>
+      <p className="conversion-rate">
+        <strong>{propostas}</strong> em negociação
+      </p>
+      <p className="conversion-rate">
+        <strong>{taxaFechamento}%</strong> de fechamento sobre agendamentos ({fechados} de {agendados})
+      </p>
+    </div>
   );
 }

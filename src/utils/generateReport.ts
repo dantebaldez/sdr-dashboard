@@ -1,64 +1,60 @@
-import { ehLeadNovo } from '../constants/leadOptions';
 import type { Lead } from '../types/lead';
 import type { Semana } from '../types/semana';
 
-function contar(leads: Lead[], origem: string, status?: string, tipoContato?: string) {
-  return leads.filter(
-    (lead) =>
-      lead.origem === origem &&
-      (!status || lead.status === status) &&
-      (!tipoContato || lead.tipoContato === tipoContato)
+function contar(leads: Lead[], filtro: Partial<Record<keyof Lead, unknown>>) {
+  return leads.filter((lead) =>
+    Object.entries(filtro).every(([k, v]) => lead[k as keyof Lead] === v)
   ).length;
 }
 
-function contarNovosPorOrigem(leads: Lead[], origem: string) {
-  return leads.filter((lead) => lead.origem === origem && ehLeadNovo(lead.tipoContato)).length;
-}
-
-function contarNoShow(leads: Lead[], origem: string) {
-  return leads.filter(
-    (lead) => lead.origem === origem && lead.status === 'Reunião agendada' && lead.noShow
-  ).length;
+function contarStatus(leads: Lead[], status: string) {
+  return leads.filter((l) => l.status === status).length;
 }
 
 export function generateReport(leads: Lead[], semana: Semana): string {
   const linhas = [
-    `➡️ WhatsApp: ${contarNovosPorOrigem(leads, 'WhatsApp')}`,
-    `➡️ Forms: ${contarNovosPorOrigem(leads, 'Formulário')}`,
-    `➡️ Indicação: ${contarNovosPorOrigem(leads, 'Indicação')}`,
-    `➡️ Reunião WhatsApp (Novo): ${contar(leads, 'WhatsApp', 'Reunião agendada', 'Novo')}`,
-    `➡️ Reunião WhatsApp (Follow-up): ${contar(leads, 'WhatsApp', 'Reunião agendada', 'Follow-up')}`,
-    `➡️ Reunião Forms (Novo): ${contar(leads, 'Formulário', 'Reunião agendada', 'Novo')}`,
-    `➡️ Reunião Forms (Follow-up): ${contar(leads, 'Formulário', 'Reunião agendada', 'Follow-up')}`,
-    `➡️ Reunião Indicação (Novo): ${contar(leads, 'Indicação', 'Reunião agendada', 'Novo')}`,
-    `➡️ Reunião Indicação (Follow-up): ${contar(leads, 'Indicação', 'Reunião agendada', 'Follow-up')}`,
-    `➡️ No Show WhatsApp: ${contarNoShow(leads, 'WhatsApp')}`,
-    `➡️ No Show Forms: ${contarNoShow(leads, 'Formulário')}`,
-    `➡️ No Show Indicação: ${contarNoShow(leads, 'Indicação')}`,
-    `➡️ Propostas Forms (Novo): ${contar(leads, 'Formulário', 'Proposta enviada', 'Novo')}`,
-    `➡️ Propostas Forms (Follow-up): ${contar(leads, 'Formulário', 'Proposta enviada', 'Follow-up')}`,
-    `➡️ Propostas WhatsApp (Novo): ${contar(leads, 'WhatsApp', 'Proposta enviada', 'Novo')}`,
-    `➡️ Propostas WhatsApp (Follow-up): ${contar(leads, 'WhatsApp', 'Proposta enviada', 'Follow-up')}`,
-    `➡️ Propostas Indicação (Novo): ${contar(leads, 'Indicação', 'Proposta enviada', 'Novo')}`,
-    `➡️ Propostas Indicação (Follow-up): ${contar(leads, 'Indicação', 'Proposta enviada', 'Follow-up')}`,
-    `➡️ Perdido Form (Novo): ${contar(leads, 'Formulário', 'Perdido', 'Novo')}`,
-		`➡️ Perdido Form (Follow-up): ${contar(leads, 'Formulário', 'Perdido', 'Follow-up')}`,
-		`➡️ Perdido WhatsApp (Novo): ${contar(leads, 'WhatsApp', 'Perdido', 'Novo')}`,
-		`➡️ Perdido WhatsApp (Follow-up): ${contar(leads, 'WhatsApp', 'Perdido', 'Follow-up')}`,
-		`➡️ Perdido Indicação (Novo): ${contar(leads, 'Indicação', 'Perdido', 'Novo')}`,
-		`➡️ Perdido Indicação (Follow-up): ${contar(leads, 'Indicação', 'Perdido', 'Follow-up')}`,
+    `*Indicadores - Energia Solar*`,
+    ``,
+    `Leads gerados: ${leads.length}`,
+    `Leads qualificados: ${contarStatus(leads, 'Lead qualificado')}`,
+    ``,
+    `Agendamentos marcados: ${contarStatus(leads, 'Agendamento marcado')}`,
+    `  ↳ Presencial: ${contar(leads, { status: 'Agendamento marcado', modalidade: 'Presencial' })}`,
+    `  ↳ Online: ${contar(leads, { status: 'Agendamento marcado', modalidade: 'Online' })}`,
+    `  ↳ No Show: ${contar(leads, { status: 'Agendamento marcado', noShow: true })}`,
+    ``,
+    `Comparecimentos/diagnósticos: ${contarStatus(leads, 'Comparecimento/diagnóstico')}`,
+    ``,
+    `Visitas realizadas: ${contarStatus(leads, 'Visita realizada')}`,
+    `  ↳ Presencial: ${contar(leads, { status: 'Visita realizada', modalidade: 'Presencial' })}`,
+    `  ↳ Online: ${contar(leads, { status: 'Visita realizada', modalidade: 'Online' })}`,
+    ``,
+    `Propostas em negociação/follow-up: ${contarStatus(leads, 'Proposta em negociação')}`,
+    ``,
+    `Vendas fechadas: ${contarStatus(leads, 'Venda fechada')}`,
+    ``,
+    `Perdidos/não avançaram: ${contarStatus(leads, 'Perdido')}`,
   ];
 
-  if (semana.metaLeads !== null && semana.metaReunioes !== null && semana.metaPropostas !== null) {
-    const totalLeads = leads.length;
-    const totalReunioes = leads.filter((lead) => lead.status === 'Reunião agendada').length;
-    const totalPropostas = leads.filter((lead) => lead.status === 'Proposta enviada').length;
+  const perdidos = leads.filter((l) => l.status === 'Perdido' && l.motivoPerda);
+  if (perdidos.length > 0) {
+    const contagem: Record<string, number> = {};
+    perdidos.forEach((l) => {
+      if (l.motivoPerda) contagem[l.motivoPerda] = (contagem[l.motivoPerda] ?? 0) + 1;
+    });
+    linhas.push(`  Motivos:`);
+    Object.entries(contagem).forEach(([motivo, n]) => {
+      linhas.push(`  ↳ ${motivo}: ${n}`);
+    });
+  }
 
+  if (semana.metaLeads !== null && semana.metaReunioes !== null && semana.metaPropostas !== null) {
     linhas.push(
-      '',
-      `➡️ Meta de leads: ${totalLeads}/${semana.metaLeads}`,
-      `➡️ Meta de reuniões: ${totalReunioes}/${semana.metaReunioes}`,
-      `➡️ Meta de propostas: ${totalPropostas}/${semana.metaPropostas}`
+      ``,
+      `Metas:`,
+      `  ↳ Leads: ${leads.length}/${semana.metaLeads}`,
+      `  ↳ Agendamentos: ${contarStatus(leads, 'Agendamento marcado')}/${semana.metaReunioes}`,
+      `  ↳ Propostas: ${contarStatus(leads, 'Proposta em negociação')}/${semana.metaPropostas}`
     );
   }
 

@@ -20,7 +20,7 @@ import { nowLocalISO } from './utils/dateTime';
 import { exportLeadsAsCsv } from './utils/exportCsv';
 import { normalizeTelefone } from './utils/normalizeTelefone';
 import { statusPrecisaTipoContato } from './constants/leadOptions';
-import type { Lead, LeadStatus, Origem, TipoContato } from './types/lead';
+import type { Lead, LeadStatus, Origem, TipoContato, Modalidade, MotivoPerdas } from './types/lead';
 import type { Semana } from './types/semana';
 import type { KommoLeadImportado } from './types/kommo';
 import './App.css';
@@ -41,7 +41,6 @@ function criarSemanaInicial(): Semana {
 function loadTema(): 'claro' | 'escuro' {
   try {
     const temaSalvo = localStorage.getItem(TEMA_KEY);
-
     return temaSalvo === 'escuro' ? 'escuro' : 'claro';
   } catch {
     return 'claro';
@@ -72,9 +71,7 @@ function App() {
       setVerificandoAuth(false);
     });
 
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, sessao) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, sessao) => {
       setSession(sessao);
     });
 
@@ -86,13 +83,8 @@ function App() {
     localStorage.setItem(TEMA_KEY, tema);
   }, [tema]);
 
-  const semanasOrdenadas = [...semanas].sort((a, b) =>
-    a.inicio > b.inicio ? 1 : -1
-  );
-
-  const semanaAtiva =
-    semanasOrdenadas.find((semana) => semana.fim === null) ??
-    semanasOrdenadas[semanasOrdenadas.length - 1];
+  const semanasOrdenadas = [...semanas].sort((a, b) => a.inicio > b.inicio ? 1 : -1);
+  const semanaAtiva = semanasOrdenadas.find((s) => s.fim === null) ?? semanasOrdenadas[semanasOrdenadas.length - 1];
 
   useEffect(() => {
     if (semanaAtiva && !semanaSelecionadaId) {
@@ -103,20 +95,13 @@ function App() {
   useEffect(() => {
     if (!carregando && semanas.length === 0) {
       const novaSemana = criarSemanaInicial();
-
       void salvarSemana(novaSemana);
       setSemanaSelecionadaId(novaSemana.id);
     }
   }, [carregando, semanas.length, salvarSemana]);
 
-  if (verificandoAuth) {
-    return null;
-  }
-
-  if (!session) {
-    return <Login />;
-  }
-
+  if (verificandoAuth) return null;
+  if (!session) return <Login />;
   if (carregando || !semanaAtiva || !semanaSelecionadaId) {
     return (
       <div className="page">
@@ -125,9 +110,7 @@ function App() {
     );
   }
 
-  const semanaSelecionada =
-    semanas.find((semana) => semana.id === semanaSelecionadaId) ?? semanaAtiva;
-
+  const semanaSelecionada = semanas.find((s) => s.id === semanaSelecionadaId) ?? semanaAtiva;
   const visualizandoSemanaAtual = semanaSelecionada.id === semanaAtiva.id;
   const leadsDaSemana = filterLeadsBySemana(leads, semanaSelecionada);
 
@@ -139,9 +122,7 @@ function App() {
   async function handleStatusChange(id: string, status: LeadStatus) {
     const lead = leads.find((item) => item.id === id);
     if (!lead) return;
-
     const precisaTipo = statusPrecisaTipoContato(status);
-
     await atualizarLead({
       ...lead,
       status,
@@ -152,63 +133,43 @@ function App() {
   async function handleOrigemChange(id: string, origem: Origem) {
     const lead = leads.find((item) => item.id === id);
     if (!lead) return;
-
     await atualizarLead({ ...lead, origem });
   }
 
-  async function handleTipoContatoChange(
-    id: string,
-    tipoContato: TipoContato
-  ) {
+  async function handleTipoContatoChange(id: string, tipoContato: TipoContato) {
     const lead = leads.find((item) => item.id === id);
     if (!lead) return;
-
     await atualizarLead({ ...lead, tipoContato });
+  }
+
+  async function handleModalidadeChange(id: string, modalidade: Modalidade) {
+    const lead = leads.find((item) => item.id === id);
+    if (!lead) return;
+    await atualizarLead({ ...lead, modalidade });
   }
 
   async function handleNoShowChange(id: string, noShow: boolean) {
     const lead = leads.find((item) => item.id === id);
     if (!lead) return;
-
     await atualizarLead({ ...lead, noShow });
   }
 
-  async function handleTelefoneChange(
-    id: string,
-    novoTelefone: string
-  ): Promise<{ sucesso: boolean; erro?: string }> {
-    const telefoneNormalizado = normalizeTelefone(novoTelefone.trim());
-
-    if (!telefoneNormalizado) {
-      return {
-        sucesso: false,
-        erro: 'O telefone não pode ficar vazio.',
-      };
-    }
-
-    const duplicado = leads.some(
-      (lead) =>
-        lead.id !== id &&
-        normalizeTelefone(lead.telefone) === telefoneNormalizado
-    );
-
-    if (duplicado) {
-      return {
-        sucesso: false,
-        erro: 'Esse número já está cadastrado em outro lead.',
-      };
-    }
-
+  async function handleMotivoPerdasChange(id: string, motivoPerda: MotivoPerdas) {
     const lead = leads.find((item) => item.id === id);
-    if (!lead) {
-      return { sucesso: false };
-    }
+    if (!lead) return;
+    await atualizarLead({ ...lead, motivoPerda });
+  }
 
-    await atualizarLead({
-      ...lead,
-      telefone: telefoneNormalizado,
-    });
-
+  async function handleTelefoneChange(id: string, novoTelefone: string): Promise<{ sucesso: boolean; erro?: string }> {
+    const telefoneNormalizado = normalizeTelefone(novoTelefone.trim());
+    if (!telefoneNormalizado) return { sucesso: false, erro: 'O telefone não pode ficar vazio.' };
+    const duplicado = leads.some(
+      (lead) => lead.id !== id && normalizeTelefone(lead.telefone) === telefoneNormalizado
+    );
+    if (duplicado) return { sucesso: false, erro: 'Esse número já está cadastrado em outro lead.' };
+    const lead = leads.find((item) => item.id === id);
+    if (!lead) return { sucesso: false };
+    await atualizarLead({ ...lead, telefone: telefoneNormalizado });
     return { sucesso: true };
   }
 
@@ -219,94 +180,58 @@ function App() {
   async function handleNotaChange(id: string, nota: string) {
     const lead = leads.find((item) => item.id === id);
     if (!lead) return;
-
     await atualizarLead({ ...lead, nota });
   }
 
-  async function handleDefinirMetas(metas: {
-    metaLeads: number;
-    metaReunioes: number;
-    metaPropostas: number;
-  }) {
+  async function handleDefinirMetas(metas: { metaLeads: number; metaReunioes: number; metaPropostas: number }) {
     if (semanaAtiva.metaLeads !== null) return;
-
-    await atualizarSemana({
-      ...semanaAtiva,
-      ...metas,
-    });
+    await atualizarSemana({ ...semanaAtiva, ...metas });
   }
 
   async function handleImportKommoLeads(
     importados: KommoLeadImportado[],
     mapaStatus: Record<string, LeadStatus>
   ) {
-    const existentes = new Set(
-      leads.map((lead) => normalizeTelefone(lead.telefone))
-    );
-
+    const existentes = new Set(leads.map((lead) => normalizeTelefone(lead.telefone)));
     const novos: Lead[] = [];
     let semTelefone = 0;
     let duplicados = 0;
 
     for (const item of importados) {
       const telefoneNormalizado = normalizeTelefone(item.telefone ?? '');
-
-      if (!telefoneNormalizado) {
-        semTelefone += 1;
-        continue;
-      }
-
-      if (existentes.has(telefoneNormalizado)) {
-        duplicados += 1;
-        continue;
-      }
-
-      const novoLead: Lead = {
+      if (!telefoneNormalizado) { semTelefone += 1; continue; }
+      if (existentes.has(telefoneNormalizado)) { duplicados += 1; continue; }
+      novos.push({
         id: crypto.randomUUID(),
         telefone: telefoneNormalizado,
         origem: null,
-        status: mapaStatus[item.statusId] ?? 'Novo',
+        status: mapaStatus[item.statusId] ?? 'Lead gerado',
         tipoContato: null,
+        modalidade: null,
         noShow: false,
+        motivoPerda: null,
         nota: '',
         criadoEm: item.criadoEm,
-      };
-
-      novos.push(novoLead);
+      });
       existentes.add(telefoneNormalizado);
     }
 
-    for (const lead of novos) {
-      await salvarLead(lead);
-    }
-
-    return {
-      importados: novos.length,
-      duplicados,
-      semTelefone,
-    };
+    for (const lead of novos) await salvarLead(lead);
+    return { importados: novos.length, duplicados, semTelefone };
   }
 
   async function handleInicioChange(novaData: string) {
-    await atualizarSemana({
-      ...semanaAtiva,
-      inicio: `${novaData}T00:00:00`,
-    });
+    await atualizarSemana({ ...semanaAtiva, inicio: `${novaData}T00:00:00` });
   }
 
   async function handleEncerrarSemana() {
     const confirmou = window.confirm(
       'Encerrar a semana atual? Os contadores vão zerar e uma nova semana vai começar agora.'
     );
-
     if (!confirmou) return;
 
     const agora = nowLocalISO();
-
-    await atualizarSemana({
-      ...semanaAtiva,
-      fim: agora,
-    });
+    await atualizarSemana({ ...semanaAtiva, fim: agora });
 
     const novaSemana: Semana = {
       id: crypto.randomUUID(),
@@ -316,7 +241,6 @@ function App() {
       metaReunioes: null,
       metaPropostas: null,
     };
-
     await salvarSemana(novaSemana);
     setSemanaSelecionadaId(novaSemana.id);
   }
@@ -327,33 +251,16 @@ function App() {
         <div className="page-header-top">
           <div>
             <h1>SDR Dashboard - Primária Energia</h1>
-            <p className="page-subtitle">
-              Acompanhamento semanal de leads
-            </p>
+            <p className="page-subtitle">Acompanhamento semanal de leads</p>
           </div>
-
-          <div
-            style={{
-              display: 'flex',
-              gap: '0.75rem',
-              alignItems: 'center',
-            }}
-          >
+          <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
             <button
               className="btn-secondary"
-              onClick={() =>
-                setTema((atual) =>
-                  atual === 'claro' ? 'escuro' : 'claro'
-                )
-              }
+              onClick={() => setTema((atual) => atual === 'claro' ? 'escuro' : 'claro')}
             >
               {tema === 'claro' ? '🌙 Modo escuro' : '☀️ Modo claro'}
             </button>
-
-            <button
-              className="btn-secondary"
-              onClick={() => void supabase.auth.signOut()}
-            >
+            <button className="btn-secondary" onClick={() => void supabase.auth.signOut()}>
               Sair
             </button>
           </div>
@@ -366,7 +273,9 @@ function App() {
         onStatusChange={handleStatusChange}
         onOrigemChange={handleOrigemChange}
         onTipoContatoChange={handleTipoContatoChange}
+        onModalidadeChange={handleModalidadeChange}
         onNoShowChange={handleNoShowChange}
+        onMotivoPerdasChange={handleMotivoPerdasChange}
         onTelefoneChange={handleTelefoneChange}
         onDeleteLead={handleDeleteLead}
         onNotaChange={handleNotaChange}
@@ -380,32 +289,20 @@ function App() {
         />
 
         {visualizandoSemanaAtual && (
-          <WeekFilter
-            startDate={semanaAtiva.inicio.slice(0, 10)}
-            onChange={handleInicioChange}
-          />
+          <WeekFilter startDate={semanaAtiva.inicio.slice(0, 10)} onChange={handleInicioChange} />
         )}
 
         {visualizandoSemanaAtual && (
-          <button
-            className="btn-secondary"
-            onClick={() => void handleEncerrarSemana()}
-          >
+          <button className="btn-secondary" onClick={() => void handleEncerrarSemana()}>
             Encerrar semana
           </button>
         )}
 
-        <button
-          className="btn-secondary"
-          onClick={() => setShowReport(true)}
-        >
+        <button className="btn-secondary" onClick={() => setShowReport(true)}>
           Gerar relatório
         </button>
 
-        <button
-          className="btn-secondary"
-          onClick={() => exportLeadsAsCsv(leads)}
-        >
+        <button className="btn-secondary" onClick={() => exportLeadsAsCsv(leads)}>
           Exportar CSV
         </button>
       </section>
@@ -417,65 +314,30 @@ function App() {
       )}
 
       {showReport && (
-        <ReportView
-          leads={leadsDaSemana}
-          semana={semanaSelecionada}
-          onClose={() => setShowReport(false)}
-        />
+        <ReportView leads={leadsDaSemana} semana={semanaSelecionada} onClose={() => setShowReport(false)} />
       )}
 
       <div className="dashboard-layout">
         <div className="dashboard-main">
-          <div
-            className={`main-grid ${
-              visualizandoSemanaAtual ? '' : 'single-column'
-            }`}
-          >
+          <div className={`main-grid ${visualizandoSemanaAtual ? '' : 'single-column'}`}>
             {visualizandoSemanaAtual && (
               <section className="panel form-panel">
                 <h2>Novo lead</h2>
-                <LeadForm
-                  existingLeads={leads}
-                  onAddLead={handleAddLead}
-                />
+                <LeadForm existingLeads={leads} onAddLead={handleAddLead} />
               </section>
             )}
-
             <section className="panel table-panel">
               <h2>Leads da semana</h2>
-
               <LeadList
                 leads={leadsDaSemana}
-                onStatusChange={
-                  visualizandoSemanaAtual
-                    ? handleStatusChange
-                    : undefined
-                }
-                onOrigemChange={
-                  visualizandoSemanaAtual
-                    ? handleOrigemChange
-                    : undefined
-                }
-                onTipoContatoChange={
-                  visualizandoSemanaAtual
-                    ? handleTipoContatoChange
-                    : undefined
-                }
-                onNoShowChange={
-                  visualizandoSemanaAtual
-                    ? handleNoShowChange
-                    : undefined
-                }
-                onTelefoneChange={
-                  visualizandoSemanaAtual
-                    ? handleTelefoneChange
-                    : undefined
-                }
-                onDeleteLead={
-                  visualizandoSemanaAtual
-                    ? handleDeleteLead
-                    : undefined
-                }
+                onStatusChange={visualizandoSemanaAtual ? handleStatusChange : undefined}
+                onOrigemChange={visualizandoSemanaAtual ? handleOrigemChange : undefined}
+                onTipoContatoChange={visualizandoSemanaAtual ? handleTipoContatoChange : undefined}
+                onModalidadeChange={visualizandoSemanaAtual ? handleModalidadeChange : undefined}
+                onNoShowChange={visualizandoSemanaAtual ? handleNoShowChange : undefined}
+                onMotivoPerdasChange={visualizandoSemanaAtual ? handleMotivoPerdasChange : undefined}
+                onTelefoneChange={visualizandoSemanaAtual ? handleTelefoneChange : undefined}
+                onDeleteLead={visualizandoSemanaAtual ? handleDeleteLead : undefined}
                 onNotaChange={handleNotaChange}
               />
             </section>
@@ -498,18 +360,11 @@ function App() {
             <WeeksComparison leads={leads} semanas={semanas} />
           </section>
 
-          {visualizandoSemanaAtual && (
-            <KommoPanel onImportLeads={handleImportKommoLeads} />
-          )}
+          {visualizandoSemanaAtual && <KommoPanel onImportLeads={handleImportKommoLeads} />}
         </div>
       </div>
 
-      {showReport && (
-        <ChartsSection
-          leads={leadsDaSemana}
-          semana={semanaSelecionada}
-        />
-      )}
+      {showReport && <ChartsSection leads={leadsDaSemana} semana={semanaSelecionada} />}
     </div>
   );
 }

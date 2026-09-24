@@ -10,7 +10,9 @@ function leadParaDB(lead: Lead) {
     origem: lead.origem,
     status: lead.status,
     tipo_contato: lead.tipoContato,
+    modalidade: lead.modalidade,
     no_show: lead.noShow,
+    motivo_perda: lead.motivoPerda,
     nota: lead.nota,
     criado_em: lead.criadoEm,
   };
@@ -23,7 +25,9 @@ function leadDoDB(row: Record<string, unknown>): Lead {
     origem: (row.origem ?? null) as Lead['origem'],
     status: row.status as Lead['status'],
     tipoContato: (row.tipo_contato ?? null) as Lead['tipoContato'],
+    modalidade: (row.modalidade ?? null) as Lead['modalidade'],
     noShow: (row.no_show ?? false) as boolean,
+    motivoPerda: (row.motivo_perda ?? null) as Lead['motivoPerda'],
     nota: (row.nota ?? '') as string,
     criadoEm: row.criado_em as string,
   };

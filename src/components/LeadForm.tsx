@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { ORIGENS } from '../constants/leadOptions';
-import type { Lead } from '../types/lead';
 import { normalizeTelefone } from '../utils/normalizeTelefone';
+import type { Lead } from '../types/lead';
 
 interface LeadFormProps {
   existingLeads: Lead[];
@@ -30,21 +30,23 @@ export function LeadForm({ existingLeads, onAddLead }: LeadFormProps) {
     }
 
     const jaExiste = existingLeads.some(
-			(lead) => normalizeTelefone(lead.telefone) === normalizeTelefone(telefoneLimpo)
-		);
+      (lead) => normalizeTelefone(lead.telefone) === normalizeTelefone(telefoneLimpo)
+    );
 
-		if (jaExiste) {
-			setErro(`O número ${telefoneLimpo} já está cadastrado.`);
-			return;
-		}
+    if (jaExiste) {
+      setErro(`O número ${telefoneLimpo} já está cadastrado.`);
+      return;
+    }
 
     onAddLead({
       id: crypto.randomUUID(),
       telefone: telefoneLimpo,
       origem,
-      status: 'Novo',
+      status: 'Lead gerado',
       tipoContato: null,
+      modalidade: null,
       noShow: false,
+      motivoPerda: null,
       nota: '',
       criadoEm: new Date().toISOString(),
     });
@@ -79,11 +81,13 @@ export function LeadForm({ existingLeads, onAddLead }: LeadFormProps) {
 
       <div className="form-field">
         <label htmlFor="origem">Origem</label>
-        <select id="origem" value={origem} onChange={(e) => setOrigem(e.target.value as (typeof ORIGENS)[number])}>
+        <select
+          id="origem"
+          value={origem}
+          onChange={(e) => setOrigem(e.target.value as (typeof ORIGENS)[number])}
+        >
           {ORIGENS.map((op) => (
-            <option key={op} value={op}>
-              {op}
-            </option>
+            <option key={op} value={op}>{op}</option>
           ))}
         </select>
       </div>

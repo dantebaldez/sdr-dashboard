@@ -1,14 +1,19 @@
 import { useState } from 'react';
-import { ORIGENS, STATUSES, TIPOS_CONTATO, statusPrecisaTipoContato, statusPrecisaNoShow } from '../constants/leadOptions';
-// import { normalizeTelefone } from '../utils/normalizeTelefone';
-import type { Lead, LeadStatus, Origem, TipoContato } from '../types/lead';
+import {
+  ORIGENS, STATUSES, TIPOS_CONTATO, MODALIDADES, MOTIVOS_PERDA,
+  statusPrecisaTipoContato, statusPrecisaNoShow,
+  statusPrecisaModalidade, statusPrecisaMotivoPerdas,
+} from '../constants/leadOptions';
+import type { Lead, LeadStatus, Origem, TipoContato, Modalidade, MotivoPerdas } from '../types/lead';
 
 interface LeadListProps {
   leads: Lead[];
   onStatusChange?: (id: string, status: LeadStatus) => void;
   onOrigemChange?: (id: string, origem: Origem) => void;
   onTipoContatoChange?: (id: string, tipoContato: TipoContato) => void;
+  onModalidadeChange?: (id: string, modalidade: Modalidade) => void;
   onNoShowChange?: (id: string, noShow: boolean) => void;
+  onMotivoPerdasChange?: (id: string, motivo: MotivoPerdas) => void;
   onTelefoneChange?: (id: string, telefone: string) => { sucesso: boolean; erro?: string } | Promise<{ sucesso: boolean; erro?: string }>;
   onDeleteLead?: (id: string) => void;
   onNotaChange?: (id: string, nota: string) => void;
@@ -49,7 +54,9 @@ export function LeadList({
   onStatusChange,
   onOrigemChange,
   onTipoContatoChange,
+  onModalidadeChange,
   onNoShowChange,
+  onMotivoPerdasChange,
   onTelefoneChange,
   onDeleteLead,
   onNotaChange,
@@ -83,18 +90,15 @@ export function LeadList({
   }
 
   async function salvarEdicao(id: string) {
-  if (!onTelefoneChange) return;
-
-  const resultado = await onTelefoneChange(id, valorEdicao.trim());
-
-  if (!resultado.sucesso) {
-    setErroEdicao(resultado.erro ?? 'Não foi possível salvar.');
-    return;
+    if (!onTelefoneChange) return;
+    const resultado = await Promise.resolve(onTelefoneChange(id, valorEdicao.trim()));
+    if (!resultado.sucesso) {
+      setErroEdicao(resultado.erro ?? 'Não foi possível salvar.');
+      return;
+    }
+    setEditandoId(null);
+    setErroEdicao('');
   }
-
-  setEditandoId(null);
-  setErroEdicao('');
-}
 
   function iniciarEdicaoNota(lead: Lead) {
     setNotaEditandoId(lead.id);
@@ -119,7 +123,7 @@ export function LeadList({
           <span role="columnheader">Telefone</span>
           <span role="columnheader">Origem</span>
           <span role="columnheader">Status</span>
-          <span role="columnheader">Tipo / No Show</span>
+          <span role="columnheader">Detalhes</span>
           {temAlgumaColunaAcoes && <span role="columnheader" aria-label="Ações" />}
         </div>
 
@@ -127,6 +131,8 @@ export function LeadList({
           {leads.map((lead) => {
             const precisaTipo = statusPrecisaTipoContato(lead.status);
             const precisaNoShow = statusPrecisaNoShow(lead.status);
+            const precisaModalidade = statusPrecisaModalidade(lead.status);
+            const precisaMotivo = statusPrecisaMotivoPerdas(lead.status);
             const estaEditando = editandoId === lead.id;
             const editavel = isLeadEditavel ? isLeadEditavel(lead) : true;
             const temColunaAcoes = temAlgumaColunaAcoes && editavel;
@@ -136,7 +142,6 @@ export function LeadList({
             return (
               <div key={lead.id}>
                 <div className="lead-row" role="row">
-
                   <div role="cell" className="lead-cell-phone">
                     {estaEditando ? (
                       <div className="edit-telefone">
@@ -150,14 +155,14 @@ export function LeadList({
                         {erroEdicao && <p className="field-error">{erroEdicao}</p>}
                       </div>
                     ) : (
-											<button
-												type="button"
-												className="telefone-link"
-												onClick={() => copiarTelefone(lead.telefone)}
-												title="Copiar número"
-											>
-												{lead.telefone}
-											</button>
+                      <button
+                        type="button"
+                        className="telefone-link"
+                        onClick={() => copiarTelefone(lead.telefone)}
+                        title="Copiar número"
+                      >
+                        {lead.telefone}
+                      </button>
                     )}
                   </div>
 
@@ -195,9 +200,9 @@ export function LeadList({
                     )}
                   </div>
 
-                  <div role="cell" className="lead-cell-tipo">
-                    <div className="tipo-noshow">
-                      {precisaTipo ? (
+                  <div role="cell" className="lead-cell-detalhes">
+                    <div className="detalhes-stack">
+                      {precisaTipo && (
                         onTipoContatoChange && editavel ? (
                           <select
                             value={lead.tipoContato ?? ''}
@@ -205,16 +210,32 @@ export function LeadList({
                             aria-label={`Tipo de contato do lead ${lead.telefone}`}
                             className={lead.tipoContato ? undefined : 'select-pendente'}
                           >
-                            <option value="" disabled>Selecionar</option>
+                            <option value="" disabled>Tipo</option>
                             {TIPOS_CONTATO.map((tipo) => (
                               <option key={tipo} value={tipo}>{tipo}</option>
                             ))}
                           </select>
                         ) : (
-                          lead.tipoContato ?? '—'
+                          lead.tipoContato && <span className="detalhe-tag">{lead.tipoContato}</span>
                         )
-                      ) : (
-                        '—'
+                      )}
+
+                      {precisaModalidade && (
+                        onModalidadeChange && editavel ? (
+                          <select
+                            value={lead.modalidade ?? ''}
+                            onChange={(e) => onModalidadeChange(lead.id, e.target.value as Modalidade)}
+                            aria-label={`Modalidade do lead ${lead.telefone}`}
+                            className={lead.modalidade ? undefined : 'select-pendente'}
+                          >
+                            <option value="" disabled>Modalidade</option>
+                            {MODALIDADES.map((m) => (
+                              <option key={m} value={m}>{m}</option>
+                            ))}
+                          </select>
+                        ) : (
+                          lead.modalidade && <span className="detalhe-tag">{lead.modalidade}</span>
+                        )
                       )}
 
                       {precisaNoShow && (
@@ -229,6 +250,26 @@ export function LeadList({
                           No Show
                         </label>
                       )}
+
+                      {precisaMotivo && (
+                        onMotivoPerdasChange && editavel ? (
+                          <select
+                            value={lead.motivoPerda ?? ''}
+                            onChange={(e) => onMotivoPerdasChange(lead.id, e.target.value as MotivoPerdas)}
+                            aria-label={`Motivo de perda do lead ${lead.telefone}`}
+                            className={lead.motivoPerda ? undefined : 'select-pendente'}
+                          >
+                            <option value="" disabled>Motivo de perda</option>
+                            {MOTIVOS_PERDA.map((m) => (
+                              <option key={m} value={m}>{m}</option>
+                            ))}
+                          </select>
+                        ) : (
+                          lead.motivoPerda && <span className="detalhe-tag">{lead.motivoPerda}</span>
+                        )
+                      )}
+
+                      {!precisaTipo && !precisaModalidade && !precisaNoShow && !precisaMotivo && '—'}
                     </div>
                   </div>
 
@@ -249,7 +290,7 @@ export function LeadList({
                       {temColunaAcoes && !editandoNota && (
                         estaEditando ? (
                           <>
-                            <button type="button" className="btn-secondary btn-compact" onClick={() => void salvarEdicao(lead.id)}>
+                            <button type="button" className="btn-secondary btn-compact" onClick={() => salvarEdicao(lead.id)}>
                               Salvar
                             </button>
                             <button type="button" className="btn-secondary btn-compact" onClick={cancelarEdicao}>
