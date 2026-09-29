@@ -1,19 +1,15 @@
 export const ORIGENS = ['WhatsApp', 'Formulário', 'Indicação'] as const;
 
 export const STATUSES = [
-  'Lead gerado',
-  'Lead qualificado',
-  'Agendamento marcado',
-  'Comparecimento/diagnóstico',
-  'Visita realizada',
-  'Proposta em negociação',
-  'Venda fechada',
+  'Novo',
+  'Atendimento marcado',
+  'Proposta enviada',
   'Perdido',
 ] as const;
 
 export const TIPOS_CONTATO = ['Novo', 'Follow-up'] as const;
 
-export const MODALIDADES = ['Presencial', 'Online'] as const;
+export const TIPOS_ATENDIMENTO = ['Visita técnica', 'Reunião online'] as const;
 
 export const MOTIVOS_PERDA = [
   'Preço/Achou caro',
@@ -26,22 +22,14 @@ export const MOTIVOS_PERDA = [
   'Decisor ausente/desalinhamento familiar',
 ] as const;
 
-// Tipo aparece em todos os status
 export function statusPrecisaTipoContato(_status: string): boolean {
   return true;
 }
 
-// No Show só em Agendamento marcado
-export function statusPrecisaNoShow(status: string): boolean {
-  return status === 'Agendamento marcado';
+export function statusPrecisaTipoAtendimento(status: string): boolean {
+  return status === 'Atendimento marcado';
 }
 
-// Modalidade (Presencial/Online) em Agendamento marcado e Visita realizada
-export function statusPrecisaModalidade(status: string): boolean {
-  return status === 'Agendamento marcado' || status === 'Visita realizada';
-}
-
-// Motivo de perda só em Perdido
 export function statusPrecisaMotivoPerdas(status: string): boolean {
   return status === 'Perdido';
 }

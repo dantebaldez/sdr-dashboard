@@ -20,7 +20,7 @@ import { nowLocalISO } from './utils/dateTime';
 import { exportLeadsAsCsv } from './utils/exportCsv';
 import { normalizeTelefone } from './utils/normalizeTelefone';
 import { statusPrecisaTipoContato } from './constants/leadOptions';
-import type { Lead, LeadStatus, Origem, TipoContato, Modalidade, MotivoPerdas } from './types/lead';
+import type { Lead, LeadStatus, Origem, TipoContato, TipoAtendimento, MotivoPerdas } from './types/lead';
 import type { Semana } from './types/semana';
 import type { KommoLeadImportado } from './types/kommo';
 import './App.css';
@@ -142,16 +142,10 @@ function App() {
     await atualizarLead({ ...lead, tipoContato });
   }
 
-  async function handleModalidadeChange(id: string, modalidade: Modalidade) {
+  async function handleTipoAtendimentoChange(id: string, tipoAtendimento: TipoAtendimento) {
     const lead = leads.find((item) => item.id === id);
     if (!lead) return;
-    await atualizarLead({ ...lead, modalidade });
-  }
-
-  async function handleNoShowChange(id: string, noShow: boolean) {
-    const lead = leads.find((item) => item.id === id);
-    if (!lead) return;
-    await atualizarLead({ ...lead, noShow });
+    await atualizarLead({ ...lead, tipoAtendimento });
   }
 
   async function handleMotivoPerdasChange(id: string, motivoPerda: MotivoPerdas) {
@@ -205,10 +199,9 @@ function App() {
         id: crypto.randomUUID(),
         telefone: telefoneNormalizado,
         origem: null,
-        status: mapaStatus[item.statusId] ?? 'Lead gerado',
+        status: mapaStatus[item.statusId] ?? 'Novo',
         tipoContato: null,
-        modalidade: null,
-        noShow: false,
+        tipoAtendimento: null,
         motivoPerda: null,
         nota: '',
         criadoEm: item.criadoEm,
@@ -273,8 +266,7 @@ function App() {
         onStatusChange={handleStatusChange}
         onOrigemChange={handleOrigemChange}
         onTipoContatoChange={handleTipoContatoChange}
-        onModalidadeChange={handleModalidadeChange}
-        onNoShowChange={handleNoShowChange}
+        onTipoAtendimentoChange={handleTipoAtendimentoChange}
         onMotivoPerdasChange={handleMotivoPerdasChange}
         onTelefoneChange={handleTelefoneChange}
         onDeleteLead={handleDeleteLead}
@@ -333,8 +325,7 @@ function App() {
                 onStatusChange={visualizandoSemanaAtual ? handleStatusChange : undefined}
                 onOrigemChange={visualizandoSemanaAtual ? handleOrigemChange : undefined}
                 onTipoContatoChange={visualizandoSemanaAtual ? handleTipoContatoChange : undefined}
-                onModalidadeChange={visualizandoSemanaAtual ? handleModalidadeChange : undefined}
-                onNoShowChange={visualizandoSemanaAtual ? handleNoShowChange : undefined}
+                onTipoAtendimentoChange={visualizandoSemanaAtual ? handleTipoAtendimentoChange : undefined}
                 onMotivoPerdasChange={visualizandoSemanaAtual ? handleMotivoPerdasChange : undefined}
                 onTelefoneChange={visualizandoSemanaAtual ? handleTelefoneChange : undefined}
                 onDeleteLead={visualizandoSemanaAtual ? handleDeleteLead : undefined}

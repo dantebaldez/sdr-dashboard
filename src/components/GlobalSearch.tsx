@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { LeadList } from './LeadList';
 import { leadEstaNaSemana } from '../utils/leadEstaNaSemana';
-import type { Lead, LeadStatus, Origem, TipoContato, Modalidade, MotivoPerdas } from '../types/lead';
+import type { Lead, LeadStatus, Origem, TipoContato, TipoAtendimento, MotivoPerdas } from '../types/lead';
 import type { Semana } from '../types/semana';
 
 interface GlobalSearchProps {
@@ -10,8 +10,7 @@ interface GlobalSearchProps {
   onStatusChange: (id: string, status: LeadStatus) => void;
   onOrigemChange: (id: string, origem: Origem) => void;
   onTipoContatoChange: (id: string, tipoContato: TipoContato) => void;
-  onModalidadeChange: (id: string, modalidade: Modalidade) => void;
-  onNoShowChange: (id: string, noShow: boolean) => void;
+  onTipoAtendimentoChange: (id: string, tipoAtendimento: TipoAtendimento) => void;
   onMotivoPerdasChange: (id: string, motivo: MotivoPerdas) => void;
   onTelefoneChange: (id: string, telefone: string) => { sucesso: boolean; erro?: string } | Promise<{ sucesso: boolean; erro?: string }>;
   onDeleteLead: (id: string) => void;
@@ -30,8 +29,7 @@ export function GlobalSearch({
   onStatusChange,
   onOrigemChange,
   onTipoContatoChange,
-  onModalidadeChange,
-  onNoShowChange,
+  onTipoAtendimentoChange,
   onMotivoPerdasChange,
   onTelefoneChange,
   onDeleteLead,
@@ -85,8 +83,7 @@ export function GlobalSearch({
             onStatusChange={onStatusChange}
             onOrigemChange={onOrigemChange}
             onTipoContatoChange={onTipoContatoChange}
-            onModalidadeChange={onModalidadeChange}
-            onNoShowChange={onNoShowChange}
+            onTipoAtendimentoChange={onTipoAtendimentoChange}
             onMotivoPerdasChange={onMotivoPerdasChange}
             onTelefoneChange={onTelefoneChange}
             onDeleteLead={onDeleteLead}

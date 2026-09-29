@@ -1,18 +1,16 @@
 import { useState } from 'react';
 import {
-  ORIGENS, STATUSES, TIPOS_CONTATO, MODALIDADES, MOTIVOS_PERDA,
-  statusPrecisaTipoContato, statusPrecisaNoShow,
-  statusPrecisaModalidade, statusPrecisaMotivoPerdas,
+  ORIGENS, STATUSES, TIPOS_CONTATO, TIPOS_ATENDIMENTO, MOTIVOS_PERDA,
+  statusPrecisaTipoContato, statusPrecisaTipoAtendimento, statusPrecisaMotivoPerdas,
 } from '../constants/leadOptions';
-import type { Lead, LeadStatus, Origem, TipoContato, Modalidade, MotivoPerdas } from '../types/lead';
+import type { Lead, LeadStatus, Origem, TipoContato, TipoAtendimento, MotivoPerdas } from '../types/lead';
 
 interface LeadListProps {
   leads: Lead[];
   onStatusChange?: (id: string, status: LeadStatus) => void;
   onOrigemChange?: (id: string, origem: Origem) => void;
   onTipoContatoChange?: (id: string, tipoContato: TipoContato) => void;
-  onModalidadeChange?: (id: string, modalidade: Modalidade) => void;
-  onNoShowChange?: (id: string, noShow: boolean) => void;
+  onTipoAtendimentoChange?: (id: string, tipoAtendimento: TipoAtendimento) => void;
   onMotivoPerdasChange?: (id: string, motivo: MotivoPerdas) => void;
   onTelefoneChange?: (id: string, telefone: string) => { sucesso: boolean; erro?: string } | Promise<{ sucesso: boolean; erro?: string }>;
   onDeleteLead?: (id: string) => void;
@@ -54,8 +52,7 @@ export function LeadList({
   onStatusChange,
   onOrigemChange,
   onTipoContatoChange,
-  onModalidadeChange,
-  onNoShowChange,
+  onTipoAtendimentoChange,
   onMotivoPerdasChange,
   onTelefoneChange,
   onDeleteLead,
@@ -130,8 +127,7 @@ export function LeadList({
         <div role="rowgroup">
           {leads.map((lead) => {
             const precisaTipo = statusPrecisaTipoContato(lead.status);
-            const precisaNoShow = statusPrecisaNoShow(lead.status);
-            const precisaModalidade = statusPrecisaModalidade(lead.status);
+            const precisaTipoAtendimento = statusPrecisaTipoAtendimento(lead.status);
             const precisaMotivo = statusPrecisaMotivoPerdas(lead.status);
             const estaEditando = editandoId === lead.id;
             const editavel = isLeadEditavel ? isLeadEditavel(lead) : true;
@@ -216,39 +212,26 @@ export function LeadList({
                             ))}
                           </select>
                         ) : (
-                          lead.tipoContato && <span className="detalhe-tag">{lead.tipoContato}</span>
+                          lead.tipoContato ? <span className="detalhe-tag">{lead.tipoContato}</span> : null
                         )
                       )}
 
-                      {precisaModalidade && (
-                        onModalidadeChange && editavel ? (
+                      {precisaTipoAtendimento && (
+                        onTipoAtendimentoChange && editavel ? (
                           <select
-                            value={lead.modalidade ?? ''}
-                            onChange={(e) => onModalidadeChange(lead.id, e.target.value as Modalidade)}
-                            aria-label={`Modalidade do lead ${lead.telefone}`}
-                            className={lead.modalidade ? undefined : 'select-pendente'}
+                            value={lead.tipoAtendimento ?? ''}
+                            onChange={(e) => onTipoAtendimentoChange(lead.id, e.target.value as TipoAtendimento)}
+                            aria-label={`Tipo de atendimento do lead ${lead.telefone}`}
+                            className={lead.tipoAtendimento ? undefined : 'select-pendente'}
                           >
-                            <option value="" disabled>Modalidade</option>
-                            {MODALIDADES.map((m) => (
-                              <option key={m} value={m}>{m}</option>
+                            <option value="" disabled>Tipo de atendimento</option>
+                            {TIPOS_ATENDIMENTO.map((tipo) => (
+                              <option key={tipo} value={tipo}>{tipo}</option>
                             ))}
                           </select>
                         ) : (
-                          lead.modalidade && <span className="detalhe-tag">{lead.modalidade}</span>
+                          lead.tipoAtendimento ? <span className="detalhe-tag">{lead.tipoAtendimento}</span> : null
                         )
-                      )}
-
-                      {precisaNoShow && (
-                        <label className="noshow-label">
-                          <input
-                            type="checkbox"
-                            checked={lead.noShow}
-                            onChange={(e) => onNoShowChange?.(lead.id, e.target.checked)}
-                            disabled={!editavel || !onNoShowChange}
-                            aria-label={`No Show do lead ${lead.telefone}`}
-                          />
-                          No Show
-                        </label>
                       )}
 
                       {precisaMotivo && (
@@ -265,11 +248,11 @@ export function LeadList({
                             ))}
                           </select>
                         ) : (
-                          lead.motivoPerda && <span className="detalhe-tag">{lead.motivoPerda}</span>
+                          lead.motivoPerda ? <span className="detalhe-tag">{lead.motivoPerda}</span> : null
                         )
                       )}
 
-                      {!precisaTipo && !precisaModalidade && !precisaNoShow && !precisaMotivo && '—'}
+                      {!precisaTipo && !precisaTipoAtendimento && !precisaMotivo && '—'}
                     </div>
                   </div>
 

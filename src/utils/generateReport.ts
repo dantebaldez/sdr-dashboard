@@ -1,60 +1,68 @@
+import { ehLeadNovo } from '../constants/leadOptions';
 import type { Lead } from '../types/lead';
 import type { Semana } from '../types/semana';
 
-function contar(leads: Lead[], filtro: Partial<Record<keyof Lead, unknown>>) {
-  return leads.filter((lead) =>
-    Object.entries(filtro).every(([k, v]) => lead[k as keyof Lead] === v)
+function contar(leads: Lead[], origem: string, status?: string, tipoContato?: string) {
+  return leads.filter(
+    (lead) =>
+      lead.origem === origem &&
+      (!status || lead.status === status) &&
+      (!tipoContato || lead.tipoContato === tipoContato)
   ).length;
 }
 
-function contarStatus(leads: Lead[], status: string) {
-  return leads.filter((l) => l.status === status).length;
+function contarNovosPorOrigem(leads: Lead[], origem: string) {
+  return leads.filter((lead) => lead.origem === origem && ehLeadNovo(lead.tipoContato)).length;
+}
+
+function contarAtendimentoPorTipo(leads: Lead[], tipoAtendimento: string) {
+  return leads.filter(
+    (lead) => lead.status === 'Atendimento marcado' && lead.tipoAtendimento === tipoAtendimento
+  ).length;
+}
+
+function contarMotivoPorPerda(leads: Lead[], motivo: string) {
+  return leads.filter(
+    (lead) => lead.status === 'Perdido' && lead.motivoPerda === motivo
+  ).length;
 }
 
 export function generateReport(leads: Lead[], semana: Semana): string {
+  const perdidos = leads.filter((l) => l.status === 'Perdido');
+  const motivosPresentes = [...new Set(perdidos.map((l) => l.motivoPerda).filter(Boolean))];
+
   const linhas = [
-    `*Indicadores - Energia Solar*`,
+    `➡️ WhatsApp: ${contarNovosPorOrigem(leads, 'WhatsApp')}`,
+    `➡️ Forms: ${contarNovosPorOrigem(leads, 'Formulário')}`,
+    `➡️ Indicação: ${contarNovosPorOrigem(leads, 'Indicação')}`,
     ``,
-    `Leads gerados: ${leads.length}`,
-    `Leads qualificados: ${contarStatus(leads, 'Lead qualificado')}`,
+    `➡️ Atendimentos marcados (Novo): ${contar(leads, 'WhatsApp', 'Atendimento marcado', 'Novo') + contar(leads, 'Formulário', 'Atendimento marcado', 'Novo') + contar(leads, 'Indicação', 'Atendimento marcado', 'Novo')}`,
+    `➡️ Atendimentos marcados (Follow-up): ${contar(leads, 'WhatsApp', 'Atendimento marcado', 'Follow-up') + contar(leads, 'Formulário', 'Atendimento marcado', 'Follow-up') + contar(leads, 'Indicação', 'Atendimento marcado', 'Follow-up')}`,
+    `  ↳ Visita técnica: ${contarAtendimentoPorTipo(leads, 'Visita técnica')}`,
+    `  ↳ Reunião online: ${contarAtendimentoPorTipo(leads, 'Reunião online')}`,
     ``,
-    `Agendamentos marcados: ${contarStatus(leads, 'Agendamento marcado')}`,
-    `  ↳ Presencial: ${contar(leads, { status: 'Agendamento marcado', modalidade: 'Presencial' })}`,
-    `  ↳ Online: ${contar(leads, { status: 'Agendamento marcado', modalidade: 'Online' })}`,
-    `  ↳ No Show: ${contar(leads, { status: 'Agendamento marcado', noShow: true })}`,
+    `➡️ Propostas enviadas (Novo): ${contar(leads, 'WhatsApp', 'Proposta enviada', 'Novo') + contar(leads, 'Formulário', 'Proposta enviada', 'Novo') + contar(leads, 'Indicação', 'Proposta enviada', 'Novo')}`,
+    `➡️ Propostas enviadas (Follow-up): ${contar(leads, 'WhatsApp', 'Proposta enviada', 'Follow-up') + contar(leads, 'Formulário', 'Proposta enviada', 'Follow-up') + contar(leads, 'Indicação', 'Proposta enviada', 'Follow-up')}`,
     ``,
-    `Comparecimentos/diagnósticos: ${contarStatus(leads, 'Comparecimento/diagnóstico')}`,
-    ``,
-    `Visitas realizadas: ${contarStatus(leads, 'Visita realizada')}`,
-    `  ↳ Presencial: ${contar(leads, { status: 'Visita realizada', modalidade: 'Presencial' })}`,
-    `  ↳ Online: ${contar(leads, { status: 'Visita realizada', modalidade: 'Online' })}`,
-    ``,
-    `Propostas em negociação/follow-up: ${contarStatus(leads, 'Proposta em negociação')}`,
-    ``,
-    `Vendas fechadas: ${contarStatus(leads, 'Venda fechada')}`,
-    ``,
-    `Perdidos/não avançaram: ${contarStatus(leads, 'Perdido')}`,
+    `➡️ Perdidos (Novo): ${contar(leads, 'WhatsApp', 'Perdido', 'Novo') + contar(leads, 'Formulário', 'Perdido', 'Novo') + contar(leads, 'Indicação', 'Perdido', 'Novo')}`,
+    `➡️ Perdidos (Follow-up): ${contar(leads, 'WhatsApp', 'Perdido', 'Follow-up') + contar(leads, 'Formulário', 'Perdido', 'Follow-up') + contar(leads, 'Indicação', 'Perdido', 'Follow-up')}`,
   ];
 
-  const perdidos = leads.filter((l) => l.status === 'Perdido' && l.motivoPerda);
-  if (perdidos.length > 0) {
-    const contagem: Record<string, number> = {};
-    perdidos.forEach((l) => {
-      if (l.motivoPerda) contagem[l.motivoPerda] = (contagem[l.motivoPerda] ?? 0) + 1;
-    });
-    linhas.push(`  Motivos:`);
-    Object.entries(contagem).forEach(([motivo, n]) => {
-      linhas.push(`  ↳ ${motivo}: ${n}`);
+  if (motivosPresentes.length > 0) {
+    linhas.push(`  ↳ Motivos de perda:`);
+    motivosPresentes.forEach((motivo) => {
+      if (motivo) linhas.push(`    • ${motivo}: ${contarMotivoPorPerda(leads, motivo)}`);
     });
   }
 
   if (semana.metaLeads !== null && semana.metaReunioes !== null && semana.metaPropostas !== null) {
+    const totalAtendimentos = leads.filter((l) => l.status === 'Atendimento marcado').length;
+    const totalPropostas = leads.filter((l) => l.status === 'Proposta enviada').length;
     linhas.push(
       ``,
-      `Metas:`,
-      `  ↳ Leads: ${leads.length}/${semana.metaLeads}`,
-      `  ↳ Agendamentos: ${contarStatus(leads, 'Agendamento marcado')}/${semana.metaReunioes}`,
-      `  ↳ Propostas: ${contarStatus(leads, 'Proposta em negociação')}/${semana.metaPropostas}`
+      `➡️ Meta de leads: ${leads.length}/${semana.metaLeads}`,
+      `➡️ Meta de atendimentos: ${totalAtendimentos}/${semana.metaReunioes}`,
+      `➡️ Meta de propostas: ${totalPropostas}/${semana.metaPropostas}`
     );
   }
 
