@@ -3,6 +3,7 @@ import { LeadList } from './LeadList';
 import { leadEstaNaSemana } from '../utils/leadEstaNaSemana';
 import type { Lead, LeadStatus, Origem, TipoContato, TipoAtendimento, MotivoPerdas } from '../types/lead';
 import type { Semana } from '../types/semana';
+import { normalizeTelefone } from '../utils/normalizeTelefone';
 
 interface GlobalSearchProps {
   leads: Lead[];
@@ -51,11 +52,13 @@ export function GlobalSearch({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-  const resultados = termoLimpo
-    ? leads.filter((lead) =>
-        (lead.telefone ?? '').replace(/\D/g, '').includes(termoLimpo.replace(/\D/g, ''))
-      )
-    : [];
+  const termoNormalizado = normalizeTelefone(termoLimpo);
+	const resultados = termoNormalizado
+		? leads.filter((lead) =>
+				normalizeTelefone(lead.telefone).includes(termoNormalizado)
+			)
+		: [];
+
 
   return (
     <section className="global-search">
