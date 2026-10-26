@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { LeadList } from './LeadList';
 import { leadEstaNaSemana } from '../utils/leadEstaNaSemana';
+import { telefoneCorresponde } from '../utils/normalizeTelefone';
 import type { Lead, LeadStatus, Origem, TipoContato, TipoAtendimento, MotivoPerdas } from '../types/lead';
 import type { Semana } from '../types/semana';
-import { normalizeTelefone } from '../utils/normalizeTelefone';
 
 interface GlobalSearchProps {
   leads: Lead[];
@@ -52,13 +52,9 @@ export function GlobalSearch({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-  const termoNormalizado = normalizeTelefone(termoLimpo);
-	const resultados = termoNormalizado
-		? leads.filter((lead) =>
-				normalizeTelefone(lead.telefone).includes(termoNormalizado)
-			)
-		: [];
-
+  const resultados = termoLimpo
+    ? leads.filter((lead) => telefoneCorresponde(lead.telefone ?? '', termoLimpo))
+    : [];
 
   return (
     <section className="global-search">

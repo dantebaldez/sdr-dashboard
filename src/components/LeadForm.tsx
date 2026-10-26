@@ -1,16 +1,22 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { ORIGENS } from '../constants/leadOptions';
-import { normalizeTelefone } from '../utils/normalizeTelefone';
+import {
+  formatTelefone,
+  normalizeTelefone,
+  soDigitos,
+  telefoneValido,
+} from '../utils/normalizeTelefone';
 import type { Lead } from '../types/lead';
 
 interface LeadFormProps {
-  existingLeads: Lead[];
+  existingLeads: Lead[]; // leads da semana atual
   onAddLead: (lead: Lead) => void;
 }
 
 export function LeadForm({ existingLeads, onAddLead }: LeadFormProps) {
   const [telefone, setTelefone] = useState('');
   const [origem, setOrigem] = useState<(typeof ORIGENS)[number]>(ORIGENS[0]);
+  const [followUp, setFollowUp] = useState(false);
   const [erro, setErro] = useState('');
   const [sucesso, setSucesso] = useState(false);
   const telefoneRef = useRef<HTMLInputElement>(null);
@@ -22,28 +28,29 @@ export function LeadForm({ existingLeads, onAddLead }: LeadFormProps) {
   function handleSubmit(event: FormEvent) {
     event.preventDefault();
     setSucesso(false);
-    const telefoneLimpo = telefone.trim();
 
-    if (!telefoneLimpo) {
-      setErro('Digite um telefone antes de adicionar.');
+    if (!telefoneValido(telefone)) {
+      setErro('Digite o DDD e o número. Ex: 61 99999-9999');
       return;
     }
 
+    const telefoneNormalizado = normalizeTelefone(telefone);
+
     const jaExiste = existingLeads.some(
-      (lead) => normalizeTelefone(lead.telefone) === normalizeTelefone(telefoneLimpo)
+      (lead) => normalizeTelefone(lead.telefone) === telefoneNormalizado
     );
 
     if (jaExiste) {
-      setErro(`O número ${telefoneLimpo} já está cadastrado.`);
+      setErro(`O número ${formatTelefone(telefoneNormalizado)} já foi cadastrado nesta semana.`);
       return;
     }
 
     onAddLead({
       id: crypto.randomUUID(),
-      telefone: telefoneLimpo,
+      telefone: telefoneNormalizado,
       origem,
       status: 'Novo',
-      tipoContato: null,
+      tipoContato: followUp ? 'Follow-up' : 'Novo',
       tipoAtendimento: null,
       motivoPerda: null,
       nota: '',
@@ -52,6 +59,7 @@ export function LeadForm({ existingLeads, onAddLead }: LeadFormProps) {
 
     setTelefone('');
     setOrigem(ORIGENS[0]);
+    setFollowUp(false);
     setErro('');
     setSucesso(true);
     telefoneRef.current?.focus();
@@ -61,19 +69,24 @@ export function LeadForm({ existingLeads, onAddLead }: LeadFormProps) {
   return (
     <form className="lead-form" onSubmit={handleSubmit}>
       <div className="form-field">
-        <label htmlFor="telefone">Telefone</label>
+        <label htmlFor="telefone">Telefone (só números, com DDD)</label>
         <input
           id="telefone"
           ref={telefoneRef}
-          type="tel"
+          type="text"
+          inputMode="numeric"
+          autoComplete="off"
           value={telefone}
           onChange={(e) => {
-            setTelefone(e.target.value);
+            setTelefone(soDigitos(e.target.value));
             if (erro) setErro('');
           }}
-          placeholder="Ex: (11) 91234-5678"
+          placeholder="Ex: 61999999999"
           className={erro ? 'input-erro' : undefined}
         />
+        {telefoneValido(telefone) && (
+          <p className="field-hint">{formatTelefone(telefone)}</p>
+        )}
         {erro && <p className="field-error">⚠ {erro}</p>}
         {sucesso && <p className="field-success">✓ Lead adicionado!</p>}
       </div>
@@ -90,6 +103,15 @@ export function LeadForm({ existingLeads, onAddLead }: LeadFormProps) {
           ))}
         </select>
       </div>
+
+      <label className="checkbox-label">
+        <input
+          type="checkbox"
+          checked={followUp}
+          onChange={(e) => setFollowUp(e.target.checked)}
+        />
+        É follow-up
+      </label>
 
       <button type="submit" className="btn-primary">
         Adicionar lead

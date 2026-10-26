@@ -20,6 +20,15 @@ export const MOTIVOS_PERDA = [
   'Insegurança sobre a empresa, instalação ou garantia',
   'Projeto inviável ou pouco atrativo',
   'Decisor ausente/desalinhamento familiar',
+  'Preencheu número errado',
+  'Cliente encerrou a ligação',
+  'Não atendeu/sem contato',
+  'Sem interesse',
+  'Já possui sistema solar',
+  'Não é proprietário do imóvel',
+  'Fora da área de atendimento',
+  'Conta de energia baixa',
+  'Lead duplicado ou de teste',
 ] as const;
 
 export function statusPrecisaTipoContato(_status: string): boolean {

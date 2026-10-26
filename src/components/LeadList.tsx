@@ -3,6 +3,7 @@ import {
   ORIGENS, STATUSES, TIPOS_CONTATO, TIPOS_ATENDIMENTO, MOTIVOS_PERDA,
   statusPrecisaTipoContato, statusPrecisaTipoAtendimento, statusPrecisaMotivoPerdas,
 } from '../constants/leadOptions';
+import { formatTelefone, normalizeTelefone, soDigitos } from '../utils/normalizeTelefone';
 import type { Lead, LeadStatus, Origem, TipoContato, TipoAtendimento, MotivoPerdas } from '../types/lead';
 
 interface LeadListProps {
@@ -71,13 +72,15 @@ export function LeadList({
 
   function handleExcluir(lead: Lead) {
     if (!onDeleteLead) return;
-    const confirmou = window.confirm(`Excluir o lead ${lead.telefone}? Essa ação não pode ser desfeita.`);
+    const confirmou = window.confirm(
+      `Excluir o lead ${formatTelefone(lead.telefone)}? Essa ação não pode ser desfeita.`
+    );
     if (confirmou) onDeleteLead(lead.id);
   }
 
   function iniciarEdicao(lead: Lead) {
     setEditandoId(lead.id);
-    setValorEdicao(lead.telefone);
+    setValorEdicao(normalizeTelefone(lead.telefone));
     setErroEdicao('');
   }
 
@@ -126,6 +129,7 @@ export function LeadList({
 
         <div role="rowgroup">
           {leads.map((lead) => {
+            const telefoneFormatado = formatTelefone(lead.telefone);
             const precisaTipo = statusPrecisaTipoContato(lead.status);
             const precisaTipoAtendimento = statusPrecisaTipoAtendimento(lead.status);
             const precisaMotivo = statusPrecisaMotivoPerdas(lead.status);
@@ -142,10 +146,12 @@ export function LeadList({
                     {estaEditando ? (
                       <div className="edit-telefone">
                         <input
-                          type="tel"
+                          type="text"
+                          inputMode="numeric"
+                          autoComplete="off"
                           value={valorEdicao}
-                          onChange={(e) => setValorEdicao(e.target.value)}
-                          aria-label={`Editar telefone de ${lead.telefone}`}
+                          onChange={(e) => setValorEdicao(soDigitos(e.target.value))}
+                          aria-label={`Editar telefone de ${telefoneFormatado}`}
                           autoFocus
                         />
                         {erroEdicao && <p className="field-error">{erroEdicao}</p>}
@@ -154,10 +160,10 @@ export function LeadList({
                       <button
                         type="button"
                         className="telefone-link"
-                        onClick={() => copiarTelefone(lead.telefone)}
+                        onClick={() => copiarTelefone(normalizeTelefone(lead.telefone))}
                         title="Copiar número"
                       >
-                        {lead.telefone}
+                        {telefoneFormatado}
                       </button>
                     )}
                   </div>
@@ -167,7 +173,7 @@ export function LeadList({
                       <select
                         value={lead.origem ?? ''}
                         onChange={(e) => onOrigemChange(lead.id, e.target.value as Origem)}
-                        aria-label={`Origem do lead ${lead.telefone}`}
+                        aria-label={`Origem do lead ${telefoneFormatado}`}
                         className={lead.origem ? undefined : 'select-pendente'}
                       >
                         <option value="" disabled>Selecionar origem</option>
@@ -185,7 +191,7 @@ export function LeadList({
                       <select
                         value={lead.status}
                         onChange={(e) => onStatusChange(lead.id, e.target.value as LeadStatus)}
-                        aria-label={`Status do lead ${lead.telefone}`}
+                        aria-label={`Status do lead ${telefoneFormatado}`}
                       >
                         {STATUSES.map((status) => (
                           <option key={status} value={status}>{status}</option>
@@ -203,7 +209,7 @@ export function LeadList({
                           <select
                             value={lead.tipoContato ?? ''}
                             onChange={(e) => onTipoContatoChange(lead.id, e.target.value as TipoContato)}
-                            aria-label={`Tipo de contato do lead ${lead.telefone}`}
+                            aria-label={`Tipo de contato do lead ${telefoneFormatado}`}
                             className={lead.tipoContato ? undefined : 'select-pendente'}
                           >
                             <option value="" disabled>Tipo</option>
@@ -221,7 +227,7 @@ export function LeadList({
                           <select
                             value={lead.tipoAtendimento ?? ''}
                             onChange={(e) => onTipoAtendimentoChange(lead.id, e.target.value as TipoAtendimento)}
-                            aria-label={`Tipo de atendimento do lead ${lead.telefone}`}
+                            aria-label={`Tipo de atendimento do lead ${telefoneFormatado}`}
                             className={lead.tipoAtendimento ? undefined : 'select-pendente'}
                           >
                             <option value="" disabled>Tipo de atendimento</option>
@@ -239,7 +245,7 @@ export function LeadList({
                           <select
                             value={lead.motivoPerda ?? ''}
                             onChange={(e) => onMotivoPerdasChange(lead.id, e.target.value as MotivoPerdas)}
-                            aria-label={`Motivo de perda do lead ${lead.telefone}`}
+                            aria-label={`Motivo de perda do lead ${telefoneFormatado}`}
                             className={lead.motivoPerda ? undefined : 'select-pendente'}
                           >
                             <option value="" disabled>Motivo de perda</option>
@@ -263,7 +269,7 @@ export function LeadList({
                           type="button"
                           className={`icon-btn ${temNota ? 'icon-btn-active' : ''}`}
                           onClick={() => (editandoNota ? cancelarEdicaoNota() : iniciarEdicaoNota(lead))}
-                          aria-label={`Nota do lead ${lead.telefone}`}
+                          aria-label={`Nota do lead ${telefoneFormatado}`}
                           title={temNota ? 'Ver/editar nota' : 'Adicionar nota'}
                         >
                           <IconeNota />
@@ -287,7 +293,7 @@ export function LeadList({
                                 type="button"
                                 className="icon-btn"
                                 onClick={() => iniciarEdicao(lead)}
-                                aria-label={`Editar lead ${lead.telefone}`}
+                                aria-label={`Editar lead ${telefoneFormatado}`}
                                 title="Editar"
                               >
                                 <IconeLapis />
@@ -298,7 +304,7 @@ export function LeadList({
                                 type="button"
                                 className="icon-btn icon-btn-delete"
                                 onClick={() => handleExcluir(lead)}
-                                aria-label={`Excluir lead ${lead.telefone}`}
+                                aria-label={`Excluir lead ${telefoneFormatado}`}
                                 title="Excluir"
                               >
                                 <IconeLixeira />

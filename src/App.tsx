@@ -18,7 +18,7 @@ import { useSupabaseData } from './hooks/useSupabaseData';
 import { filterLeadsBySemana } from './utils/filterLeadsBySemana';
 import { nowLocalISO } from './utils/dateTime';
 import { exportLeadsAsCsv } from './utils/exportCsv';
-import { normalizeTelefone } from './utils/normalizeTelefone';
+import { normalizeTelefone, telefoneValido } from './utils/normalizeTelefone';
 import { statusPrecisaTipoContato } from './constants/leadOptions';
 import type { Lead, LeadStatus, Origem, TipoContato, TipoAtendimento, MotivoPerdas } from './types/lead';
 import type { Semana } from './types/semana';
@@ -113,6 +113,7 @@ function App() {
   const semanaSelecionada = semanas.find((s) => s.id === semanaSelecionadaId) ?? semanaAtiva;
   const visualizandoSemanaAtual = semanaSelecionada.id === semanaAtiva.id;
   const leadsDaSemana = filterLeadsBySemana(leads, semanaSelecionada);
+	const leadsDaSemanaAtiva = filterLeadsBySemana(leads, semanaAtiva);
 
   async function handleAddLead(lead: Lead) {
     await salvarLead(lead);
@@ -155,17 +156,25 @@ function App() {
   }
 
   async function handleTelefoneChange(id: string, novoTelefone: string): Promise<{ sucesso: boolean; erro?: string }> {
-    const telefoneNormalizado = normalizeTelefone(novoTelefone.trim());
-    if (!telefoneNormalizado) return { sucesso: false, erro: 'O telefone não pode ficar vazio.' };
-    const duplicado = leads.some(
-      (lead) => lead.id !== id && normalizeTelefone(lead.telefone) === telefoneNormalizado
-    );
-    if (duplicado) return { sucesso: false, erro: 'Esse número já está cadastrado em outro lead.' };
-    const lead = leads.find((item) => item.id === id);
-    if (!lead) return { sucesso: false };
-    await atualizarLead({ ...lead, telefone: telefoneNormalizado });
-    return { sucesso: true };
+  if (!telefoneValido(novoTelefone)) {
+    return { sucesso: false, erro: 'Digite o DDD e o número. Ex: 61 99999-9999' };
   }
+
+  const telefoneNormalizado = normalizeTelefone(novoTelefone);
+
+  const duplicado = leadsDaSemanaAtiva.some(
+    (lead) => lead.id !== id && normalizeTelefone(lead.telefone) === telefoneNormalizado
+  );
+  if (duplicado) {
+    return { sucesso: false, erro: 'Esse número já está cadastrado nesta semana.' };
+  }
+
+  const lead = leads.find((item) => item.id === id);
+  if (!lead) return { sucesso: false };
+
+  await atualizarLead({ ...lead, telefone: telefoneNormalizado });
+  return { sucesso: true };
+}
 
   async function handleDeleteLead(id: string) {
     await deletarLead(id);
@@ -315,7 +324,7 @@ function App() {
             {visualizandoSemanaAtual && (
               <section className="panel form-panel">
                 <h2>Novo lead</h2>
-                <LeadForm existingLeads={leads} onAddLead={handleAddLead} />
+                <LeadForm existingLeads={leadsDaSemanaAtiva} onAddLead={handleAddLead} />
               </section>
             )}
             <section className="panel table-panel">
